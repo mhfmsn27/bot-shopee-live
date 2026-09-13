@@ -1,0 +1,38 @@
+[
+  {
+    "id": "hist-1789198198567-9uot",
+    "campaignId": "cmp-mty2erxg-a1iu",
+    "name": "Test Live Audit",
+    "roomId": "1234567890",
+    "startTime": "2026-09-12T07:29:58.567Z",
+    "endTime": "2026-09-12T07:29:58.567Z",
+    "durationMinutes": 1,
+    "peakViewers": 5,
+    "accumulatedViews": 2,
+    "totalLikes": 0,
+    "totalComments": 0,
+    "totalCartClicks": 0,
+    "totalChurnRotations": 0,
+    "bandwidthKb": 0,
+    "stopReason": "manual_stop",
+    "createdAt": "2026-09-12T07:29:58.567Z"
+  },
+  {
+    "id": "hist-1789197192447-e10y",
+    "campaignId": "cmp-mty1t7ma-mc0e",
+    "name": "Test Live Audit",
+    "roomId": "1234567890",
+    "startTime": "2026-09-12T07:13:12.447Z",
+    "endTime": "2026-09-12T07:13:12.447Z",
+    "durationMinutes": 1,
+    "peakViewers": 5,
+    "accumulatedViews": 2,
+    "totalLikes": 0,
+    "totalComments": 0,
+    "totalCartClicks": 0,
+    "totalChurnRotations": 0,
+    "bandwidthKb": 0,
+    "stopReason": "manual_stop",
+    "createdAt": "2026-09-12T07:13:12.447Z"
+  }
+]

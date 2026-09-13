@@ -1,0 +1,69 @@
+{
+  "system": {
+    "serverPort": 3000,
+    "maxConcurrentWorkers": 2000,
+    "defaultHeartbeatIntervalSec": 15,
+    "autoStopOnStreamEnd": true
+  },
+  "retention": {
+    "defaultMode": "dynamic_churn",
+    "minWatchMinutes": 5,
+    "maxWatchMinutes": 15,
+    "fixedDurationMinutes": 60,
+    "rampUpRatePerMin": 25,
+    "rampDownRatePerMin": 40
+  },
+  "accountGenerator": {
+    "defaultProvider": "temp_inbox",
+    "autoEnrichProfile": true,
+    "autoAvatar": true,
+    "locale": "id_ID"
+  },
+  "interaction": {
+    "enableLike": true,
+    "likeRatePerMin": 100,
+    "likeBurstMin": 3,
+    "likeBurstMax": 8,
+    "enableComment": true,
+    "commentIntervalSec": 30,
+    "defaultCategory": "general",
+    "enableShare": true,
+    "shareIntervalSec": 60,
+    "enableCartClick": true,
+    "cartClickRatePerMin": 15,
+    "maxCommentsPerSession": 500,
+    "antiSpamJitterSec": 4
+  },
+  "smsGateway": {
+    "provider": "simulator",
+    "apiKey": "",
+    "customWebhookUrl": "",
+    "defaultCountry": "id",
+    "serviceCode": "shopee",
+    "autoCancelTimeoutSec": 150
+  },
+  "whatsapp": {
+    "enabled": true,
+    "adminNumber": "081298765432",
+    "notifyOnStart": true,
+    "notifyOnMilestone": true,
+    "notifyOnFinish": true,
+    "notifyOnProxyError": true,
+    "milestoneStep": 250,
+    "notificationEvents": {
+      "liveStart": true,
+      "milestones": true,
+      "campaignEnd": true,
+      "wafAlert": true
+    }
+  },
+  "security": {
+    "enabled": true,
+    "passwordHash": "6453681feca0f1d0abf69f783fe36ee223d0db9ef877ce68977449e867f1bf4fe19fe2952eeece0b82ae1f8be393e60699b7d37021f432f0bd44c10ff5a0cc94",
+    "salt": "315c777762e739de21ee69daf7087778",
+    "sessionTimeoutMinutes": 60,
+    "enable2faWhatsapp": false,
+    "adminPhone": "081298765432",
+    "updatedAt": "2026-09-12T07:29:52.789Z"
+  }
+}

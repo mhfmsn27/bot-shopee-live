@@ -1,0 +1,31 @@
+services:
+  shopee-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shopee-live-view-bot
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # ===== WAJIB DIISI SEBELUM DEPLOY =====
+      # Ganti dengan string acak 64+ karakter (gunakan: openssl rand -hex 32)
+      - SESSION_SECRET=${SESSION_SECRET:-}
+      # Ganti dengan master password pilihan Anda (min 12 karakter)
+      - APP_MASTER_PASSWORD=${APP_MASTER_PASSWORD:-}
+      # ===== OPSIONAL =====
+      # - API_BEARER_TOKEN=your_secure_bearer_token_here
+      # - TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+      # - TELEGRAM_CHAT_ID=your_telegram_chat_id
+      # - DISCORD_WEBHOOK_URL=your_discord_webhook_url
+    volumes:
+      - ./backend/data:/app/backend/data
+      - ./backend/backups:/app/backend/backups
+      - ./backend/wa-sessions:/app/backend/wa-sessions
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

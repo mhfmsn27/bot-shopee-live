@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panduan Setup VPS & Domain — Shopee Live View Bot Pro</title>
+  <meta name="description" content="Panduan langkah demi langkah modern setup Shopee Live View Bot di VPS Ubuntu dengan SSH, FileZilla SFTP, Nginx Reverse Proxy, dan Domain beda provider.">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-surface: #0f172a;
+      --bg-card: rgba(15, 23, 42, 0.75);
+      --bg-card-hover: rgba(30, 41, 59, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-focus: #38bdf8;
+      
+      --accent-cyan: #00f2fe;
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-orange: #ee4d2d;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      
+      --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      line-height: 1.65;
+      overflow-x: hidden;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(238, 77, 45, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
+      background-attachment: fixed;
+    }
+
+    /* Top Progress Bar */
+    #reading-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-orange), var(--accent-cyan));
+      z-index: 9999;
+      transition: width 0.1s ease;
+    }
+
+    /* Header Nav */
+    .top-navbar {
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(9, 13, 22, 0.85);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 1000;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--accent-orange), #ff7849);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(238, 77, 45, 0.35);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: #ffffff;
+    }
+
+    .brand-text h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text span {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-orange), #ff6b3d);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(238, 77, 45, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(238, 77, 45, 0.4);
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Layout Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 36px;
+      align-items: start;
+    }
+
+    /* Sidebar Sticky Navigation */
+    .sidebar {
+      position: sticky;
+      top: 90px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .sidebar-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .checklist-counter {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .toc-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .toc-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .toc-link:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    .toc-link.active {
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--accent-cyan);
+      font-weight: 600;
+      border-left: 3px solid var(--accent-cyan);
+    }
+
+    .toc-badge {
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Main Content */
+    .content-area {
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero-banner::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(0, 242, 254, 0.15), transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(238, 77, 45, 0.12);
+      border: 1px solid rgba(238, 77, 45, 0.3);
+      color: #ff7849;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+
+    .hero-banner h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.25;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-banner p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 720px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .hero-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .hero-feat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 0.82rem;
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .hero-feat-item svg {
+      width: 14px;
+      height: 14px;
+      color: var(--accent-green);
+    }
+
+    /* Architecture Visualizer Card */
+    .arch-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 40px;
+    }
+
+    .arch-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .arch-flow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+      position: relative;
+    }
+
+    .arch-step {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .arch-step:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 242, 254, 0.1);
+    }
+
+    .arch-step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .arch-icon {
+      font-size: 1.3rem;
+    }
+
+    .arch-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--accent-cyan);
+    }
+
+    .arch-step h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .arch-step p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Section Step Block */
+    .step-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      margin-bottom: 32px;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+
+    .step-section:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .step-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 16px;
+    }
+
+    .step-title-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .step-number {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .step-title-group h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .step-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .step-time {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .step-done-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+      border: 1px solid var(--border-color);
+    }
+
+    .step-done-label:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .step-done-label input[type="checkbox"] {
+      accent-color: var(--accent-green);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* Code Snippet Box */
+    .code-box {
+      background: #06090f;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      margin: 16px 0;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .code-box-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .code-box-title {
+      font-family: var(--font-code);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-copy {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-copy:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-copy.copied {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    pre {
+      padding: 14px;
+      overflow-x: auto;
+      font-family: var(--font-code);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+    }
+
+    code {
+      font-family: var(--font-code);
+    }
+
+    .token-comment { color: #64748b; }
+    .token-command { color: #38bdf8; font-weight: 600; }
+    .token-param { color: #f59e0b; }
+    .token-string { color: #34d399; }
+
+    /* Callout Alerts */
+    .alert {
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      margin: 16px 0;
+      display: flex;
+      gap: 12px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .alert-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .alert-info {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #bae6fd;
+    }
+
+    .alert-warning {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      color: #fef3c7;
+    }
+
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      color: #fecaca;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #a7f3d0;
+    }
+
+    /* Table Styles */
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 16px 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 12px 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Live Generator Tool Card */
+    .generator-tool {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .generator-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .input-field {
+      flex: 1;
+      background: #06090f;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: #ffffff;
+      font-family: var(--font-code);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    /* Accordion FAQ */
+    .accordion-item {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .accordion-header {
+      padding: 14px 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: background 0.2s;
+    }
+
+    .accordion-header:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .accordion-content {
+      padding: 0 18px 16px;
+      display: none;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 12px;
+    }
+
+    .accordion-item.open .accordion-content {
+      display: block;
+    }
+
+    .accordion-item.open .accordion-icon {
+      transform: rotate(180deg);
+    }
+
+    .accordion-icon {
+      transition: transform 0.2s;
+    }
+
+    
+    @media print {
+      .top-navbar, .sidebar, #reading-progress, .btn, .generator-tool, .step-done-label {
+        display: none !important;
+      }
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .container {
+        grid-template-columns: 1fr !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .hero-banner, .step-section, .arch-card, .code-box {
+        border: 1px solid #ccc !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+      }
+      h1, h2, h3, h4, p, span, td, th {
+        color: #000000 !important;
+        -webkit-text-fill-color: initial !important;
+      }
+      pre, code {
+        color: #1e293b !important;
+        background: #f8fafc !important;
+      }
+      .accordion-content {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none; /* Hide sidebar on mobile/tablet */
+      }
+      .hero-banner h2 {
+        font-size: 1.6rem;
+      }
+      .input-row {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Real-time Reading Progress Bar -->
+  <div id="reading-progress"></div>
+
+  <!-- Main Top Bar -->
+  <header class="top-navbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Shopee Live Bot • Deployment Studio</h1>
+        <span>🔒 Dokumen Pribadi Internal • Setup VPS Linux, FileZilla SFTP, & Domain</span>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <button type="button" class="btn btn-outline" id="btn-reset-checklist" title="Reset status checklist">
+        🔄 Reset Progress
+      </button>
+      <button type="button" class="btn btn-primary" onclick="window.print()" title="Cetak atau Simpan sebagai PDF">
+        🖨️ Simpan PDF / Cetak
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+
+    <!-- Sticky Sidebar Table of Contents -->
+    <aside class="sidebar">
+      <div class="sidebar-title">
+        <span>Tahapan Setup</span>
+        <span class="checklist-counter" id="progress-text">0/8 Selesai</span>
+      </div>
+
+      <ul class="toc-list">
+        <li><a href="#fase-arsitektur" class="toc-link"><span class="toc-badge">0</span> Arsitektur Sistem</a></li>
+        <li><a href="#fase-1" class="toc-link"><span class="toc-badge">1</span> Hubungkan DNS Domain</a></li>
+        <li><a href="#fase-2" class="toc-link"><span class="toc-badge">2</span> Akses SSH & Node.js 22</a></li>
+        <li><a href="#fase-3" class="toc-link"><span class="toc-badge">3</span> Upload via FileZilla</a></li>
+        <li><a href="#fase-4" class="toc-link"><span class="toc-badge">4</span> Konfigurasi .env & NPM</a></li>
+        <li><a href="#fase-5" class="toc-link"><span class="toc-badge">5</span> Daemon PM2 24/7</a></li>
+        <li><a href="#fase-6" class="toc-link"><span class="toc-badge">6</span> Nginx Reverse Proxy</a></li>
+        <li><a href="#fase-7" class="toc-link"><span class="toc-badge">7</span> Pasang SSL Certbot</a></li>
+        <li><a href="#fase-8" class="toc-link"><span class="toc-badge">8</span> Keamanan & UFW</a></li>
+        <li><a href="#fase-faq" class="toc-link"><span class="toc-badge">FAQ</span> Solusi Kendala</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+
+      <!-- Hero Header Banner -->
+      <div class="hero-banner">
+        <div class="hero-tag">🌟 Enterprise Production Guide</div>
+        <h2>Deploy Shopee Live View Bot ke VPS Cloud Mandiri</h2>
+        <p>
+          Jalankan bot penonton live streaming Shopee 24 jam nonstop di cloud server tanpa membebani laptop Anda. 
+          Panduan ini mengulas integrasi domain dari provider berbeda, konfigurasi SFTP FileZilla aman, 
+          dan optimalisasi Server-Sent Events (SSE) agar grafik real-time tidak tertahan.
+        </p>
+
+        <div class="hero-features">
+          <div class="hero-feat-item">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+            Node.js v22 LTS Native SQLite
+          </div>
+          <div class="hero-feat-item">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+            PM2 Autorestart 24/7
+          </div>
+          <div class="hero-feat-item">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+            SSL Gratis Let's Encrypt
+          </div>
+          <div class="hero-feat-item">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+            Nginx SSE Buffer-Free
+          </div>
+        </div>
+      </div>
+
+      <!-- Architecture Topology Section -->
+      <section id="fase-arsitektur" class="arch-card">
+        <h3>
+          <span>🏗️</span> Topologi Arsitektur Sistem (Beda Provider)
+        </h3>
+        <p style="font-size:0.9rem; color:var(--text-muted);">
+          Meskipun domain Anda dibeli di tempat terpisah (contoh: Niagahoster/Domainesia/Cloudflare) dan VPS disewa di tempat lain (contoh: DigitalOcean/Contabo/Hetzner), alur komunikasi data tetap terhubung lancar melalui standar DNS A-Record:
+        </p>
+
+        <div class="arch-flow">
+          <div class="arch-step">
+            <div class="arch-step-header">
+              <span class="arch-icon">🌐</span>
+              <span class="arch-badge">Provider 1</span>
+            </div>
+            <h4>Domain Registrar</h4>
+            <p>Niagahoster, Domainesia, Cloudflare, Namecheap. Menyediakan nama domain Anda.</p>
+          </div>
+
+          <div class="arch-step">
+            <div class="arch-step-header">
+              <span class="arch-icon">⚡</span>
+              <span class="arch-badge">Jembatan</span>
+            </div>
+            <h4>DNS A-Record</h4>
+            <p>Mengarahkan nama domain (misal: <code>bot.anda.com</code>) ke alamat IP Publik VPS.</p>
+          </div>
+
+          <div class="arch-step">
+            <div class="arch-step-header">
+              <span class="arch-icon">🛡️</span>
+              <span class="arch-badge">Provider 2</span>
+            </div>
+            <h4>VPS Linux Cloud</h4>
+            <p>DigitalOcean, Contabo, AWS, dll. Menjalankan Nginx (Port 80/443) dengan SSL HTTPS.</p>
+          </div>
+
+          <div class="arch-step">
+            <div class="arch-step-header">
+              <span class="arch-icon">🤖</span>
+              <span class="arch-badge">Runtime</span>
+            </div>
+            <h4>Aplikasi Node v22</h4>
+            <p>Berjalan di port 3000 dipantau PM2 dengan database SQLite terenkripsi AES-256-GCM.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE 1: Hubungkan DNS Domain -->
+      <section id="fase-1" class="step-section">
+        <div class="step-header">
+          <div class="step-title-group">
+            <div class="step-number">1</div>
+            <div>
+              <h3>Hubungkan Domain ke Alamat IP VPS (DNS Setup)</h3>
+              <div class="step-meta">
+                <span class="step-time">⏱️ Estimasi: 3 Menit</span>
+                <span style="color:var(--text-dim);">•</span>
+                <span style="font-size:0.75rem;color:var(--accent-cyan);">Dashboard Provider Domain</span>
+              </div>
+            </div>
+          </div>
+          <label class="step-done-label">
+            <input type="checkbox" class="step-checkbox" data-step="1">
+            <span>Tandai Selesai</span>
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:14px;">
+          Buka dashboard tempat Anda membeli domain. Buka menu <strong>DNS Management</strong> atau <strong>DNS Zone Editor</strong>, lalu tambahkan dua buah <strong>A Record</strong> yang mengarah ke IP publik VPS Anda:
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Tipe Record</th>
+                <th>Host / Name</th>
+                <th>Target / Points to</th>
+                <th>TTL</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color:var(--accent-cyan);">A</strong></td>
+                <td><code>@</code> (atau kosongkan)</td>
+                <td><code>[IP_PUBLIK_VPS_ANDA]</code></td>
+                <td>300 / Auto</td>
+                <td>Domain utama (misal: <code>domainanda.com</code>)</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--accent-cyan);">A</strong></td>
+                <td><code>www</code></td>
+                <td><code>[IP_PUBLIK_VPS_ANDA]</code></td>
+                <td>300 / Auto</td>
+                <td>Subdomain www (misal: <code>www.domainanda.com</code>)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert alert-warning">
+          <div class="alert-icon">⚠️</div>
+          <div>
+            <strong>Catatan Khusus Pengguna Cloudflare:</strong><br>
+            Jika domain Anda menggunakan Cloudflare, pastikan status proxy diatur ke <strong>DNS Only (Ikon Awan Abu-abu / Grey Cloud)</strong> terlebih dahulu saat proses instalasi SSL Certbot. Setelah sertifikat aktif, Anda boleh menyalakan mode Proxied kembali.
+          </div>
+        </div>
+
+        <p style="font-size:0.85rem; color:var(--text-dim); margin-top:10px;">
+          Verifikasi propagasi DNS di terminal laptop Anda:
+        </p>
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Terminal / Command Prompt Lokal</span>
+            <button type="button" class="btn-copy" data-target="cmd-ping">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-ping">ping domainanda.com</code></pre>
+        </div>
+      </section>
+
+      <!-- FASE 2: Akses SSH & Node.js 22 -->
+      <section id="fase-2" class="step-section">
+        <div class="step-header">
+          <div class="step-title-group">
+            <div class="step-number">2</div>
+            <div>
+              <h3>Masuk via SSH & Pasang Node.js v22 LTS</h3>
+              <div class="step-meta">
+                <span class="step-time">⏱️ Estimasi: 5 Menit</span>
+                <span style="color:var(--text-dim);">•</span>
+                <span style="font-size:0.75rem;color:var(--accent-cyan);">PowerShell / PuTTY</span>
+              </div>
+            </div>
+          </div>
+          <label class="step-done-label">
+            <input type="checkbox" class="step-checkbox" data-step="2">
+            <span>Tandai Selesai</span>
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:12px;">
+          Buka <strong>PowerShell</strong> atau <strong>Terminal</strong> di komputer Anda dan login ke VPS:
+        </p>
+
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Login SSH</span>
+            <button type="button" class="btn-copy" data-target="cmd-ssh">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-ssh">ssh root@IP_PUBLIK_VPS</code></pre>
+        </div>
+
+        <div class="alert alert-danger">
+          <div class="alert-icon">🛑</div>
+          <div>
+            <strong>PENTING: Wajib Node.js Versi 22.5.0 ke atas!</strong><br>
+            Aplikasi ini menggunakan driver native <code>node:sqlite</code> (DatabaseSync). Jangan menggunakan Node.js 18 atau 20 bawaan Ubuntu. Gunakan script resmi NodeSource berikut:
+          </div>
+        </div>
+
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Install Dependensi & Node.js 22 LTS</span>
+            <button type="button" class="btn-copy" data-target="cmd-install-node">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-install-node"><span class="token-comment"># 1. Update paket sistem</span>
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl wget git ufw build-essential nginx certbot python3-certbot-nginx
+
+<span class="token-comment"># 2. Pasang repository resmi NodeSource v22.x</span>
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+<span class="token-comment"># 3. Pasang PM2 secara global</span>
+sudo npm install -g pm2
+
+<span class="token-comment"># 4. Buat folder target aplikasi di VPS</span>
+sudo mkdir -p /var/www/shopee-live-bot
+sudo chown -R $USER:$USER /var/www/shopee-live-bot</code></pre>
+        </div>
+
+        <p style="font-size:0.85rem; color:var(--text-dim);">
+          Periksa apakah versi sudah benar dengan mengetik <code>node -v</code> (harus muncul <strong>v22.x.x</strong>).
+        </p>
+      </section>
+
+      <!-- FASE 3: Upload via FileZilla -->
+      <section id="fase-3" class="step-section">
+        <div class="step-header">
+          <div class="step-title-group">
+            <div class="step-number">3</div>
+            <div>
+              <h3>Upload File Proyek Menggunakan FileZilla (SFTP)</h3>
+              <div class="step-meta">
+                <span class="step-time">⏱️ Estimasi: 4 Menit</span>
+                <span style="color:var(--text-dim);">•</span>
+                <span style="font-size:0.75rem;color:var(--accent-cyan);">FileZilla Client PC</span>
+              </div>
+            </div>
+          </div>
+          <label class="step-done-label">
+            <input type="checkbox" class="step-checkbox" data-step="3">
+            <span>Tandai Selesai</span>
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:14px;">
+          Buka aplikasi <strong>FileZilla</strong> di laptop Anda:
+        </p>
+
+        <ol style="margin-left:20px; font-size:0.9rem; color:var(--text-muted); line-height:1.7;">
+          <li>Klik menu <strong>File > Site Manager</strong> (atau <code>Ctrl + S</code>) → Klik <strong>New Site</strong>.</li>
+          <li>Pilih Protocol: <strong style="color:var(--accent-cyan);">SFTP - SSH File Transfer Protocol</strong>.</li>
+          <li>Masukkan Host: <strong>IP Publik VPS Anda</strong>, Port: <strong>22</strong>.</li>
+          <li>Pilih Logon Type: <strong>Normal</strong>, isi User: <code>root</code> dan Password VPS Anda.</li>
+          <li>Klik <strong>Connect</strong>.</li>
+        </ol>
+
+        <div class="alert alert-warning" style="margin-top:16px;">
+          <div class="alert-icon">⚠️</div>
+          <div>
+            <strong>ATURAN EMAS UPLOAD:</strong><br>
+            Arahkan panel kanan (Remote site) ke <code>/var/www/shopee-live-bot</code>.<br>
+            Upload: folder <code>backend</code>, folder <code>frontend</code>, <code>package.json</code>, <code>package-lock.json</code>, <code>ecosystem.config.js</code>, dan <code>.env.example</code>.<br>
+            <strong style="color:var(--accent-red);">JANGAN PERNAH UPLOAD FOLDER node_modules DARI WINDOWS!</strong> Modul binary harus di-build langsung di sistem operasi Linux pada langkah berikutnya.
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE 4: Konfigurasi .env & NPM -->
+      <section id="fase-4" class="step-section">
+        <div class="step-header">
+          <div class="step-title-group">
+            <div class="step-number">4</div>
+            <div>
+              <h3>Setup Environment (.env) & Install Dependensi Linux</h3>
+              <div class="step-meta">
+                <span class="step-time">⏱️ Estimasi: 3 Menit</span>
+                <span style="color:var(--text-dim);">•</span>
+                <span style="font-size:0.75rem;color:var(--accent-cyan);">SSH Terminal</span>
+              </div>
+            </div>
+          </div>
+          <label class="step-done-label">
+            <input type="checkbox" class="step-checkbox" data-step="4">
+            <span>Tandai Selesai</span>
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:12px;">
+          Kembali ke jendela SSH Terminal Anda untuk menyiapkan konfigurasi keamanan:
+        </p>
+
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Konfigurasi .env & Install Modul</span>
+            <button type="button" class="btn-copy" data-target="cmd-setup-env">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-setup-env"><span class="token-comment"># Masuk ke direktori aplikasi di VPS</span>
+cd /var/www/shopee-live-bot
+
+<span class="token-comment"># Salin template environment</span>
+cp .env.example .env
+nano .env</code></pre>
+        </div>
+
+        <!-- In-page Secret Key Generator Tool -->
+        <div class="generator-tool">
+          <div class="generator-title">
+            <span>⚡</span> Generator Kunci Rahasia Cepat (In-Browser Generator)
+          </div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+            Klik tombol untuk menghasilkan secret hash 64-karakter acak untuk variabel <code>SESSION_SECRET</code> Anda:
+          </p>
+          <div class="input-row">
+            <input type="text" id="gen-secret-output" class="input-field" readonly value="f89b02a7c41e5983e29f0714b98c56d7841e2a5f9c0b3e6d8a7c2f1e4b8a9d0c">
+            <button type="button" class="btn btn-outline" id="btn-generate-secret">🎲 Buat Kunci Baru</button>
+            <button type="button" class="btn btn-primary" id="btn-copy-secret">📋 Salin</button>
+          </div>
+        </div>
+
+        <p style="font-size:0.85rem; color:var(--text-dim); margin-top:10px;">
+          Pastikan isi file <code>.env</code> Anda memuat parameter berikut (simpan dengan <code>Ctrl + O</code>, lalu keluar <code>Ctrl + X</code>):
+        </p>
+
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Isi File .env di VPS</span>
+            <button type="button" class="btn-copy" data-target="code-env-content">📋 Salin</button>
+          </div>
+          <pre><code id="code-env-content">SESSION_SECRET=masukkan_kunci_acak_64_karakter_di_atas
+APP_SECRET_KEY=shopee-live-enterprise-secret-key-32b!
+APP_MASTER_PASSWORD=PasswordKuatAnda123!
+NODE_ENV=production
+PORT=3000</code></pre>
+        </div>
+
+        <p style="font-size:0.88rem; color:var(--text-muted); margin:12px 0 6px;">
+          Jalankan instalasi dependensi Linux:
+        </p>
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Install Modul Khusus Linux</span>
+            <button type="button" class="btn-copy" data-target="cmd-npm-install">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-npm-install">npm install --production</code></pre>
+        </div>
+      </section>
+
+      <!-- FASE 5: Daemon PM2 24/7 -->
+      <section id="fase-5" class="step-section">
+        <div class="step-header">
+          <div class="step-title-group">
+            <div class="step-number">5</div>
+            <div>
+              <h3>Jalankan Aplikasi 24/7 Nonstop Menggunakan PM2</h3>
+              <div class="step-meta">
+                <span class="step-time">⏱️ Estimasi: 2 Menit</span>
+                <span style="color:var(--text-dim);">•</span>
+                <span style="font-size:0.75rem;color:var(--accent-cyan);">Process Daemon</span>
+              </div>
+            </div>
+          </div>
+          <label class="step-done-label">
+            <input type="checkbox" class="step-checkbox" data-step="5">
+            <span>Tandai Selesai</span>
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:12px;">
+          Jalankan aplikasi dengan konfigurasi production <code>ecosystem.config.js</code> yang sudah tersedia di root proyek:
+        </p>
+
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Perintah PM2 Service</span>
+            <button type="button" class="btn-copy" data-target="cmd-pm2">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-pm2"><span class="token-comment"># 1. Jalankan aplikasi via config ecosystem</span>
+pm2 start ecosystem.config.js --env production
+
+<span class="token-comment"># 2. Simpan daftar proses aktif</span>
+pm2 save
+
+<span class="token-comment"># 3. Buat script startup agar bot otomatis hidup saat server reboot</span>
+pm2 startup</code></pre>
+        </div>
+
+        <div class="alert alert-info">
+          <div class="alert-icon">💡</div>
+          <div>
+            <strong>Perintah Berguna PM2:</strong><br>
+            • Pantau log siaran: <code>pm2 logs shopee-live-view-bot</code><br>
+            • Cek penggunaan CPU & RAM: <code>pm2 status</code> atau <code>pm2 monit</code><br>
+            • Restart aplikasi: <code>pm2 restart shopee-live-view-bot</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE 6: Nginx Reverse Proxy -->
+      <section id="fase-6" class="step-section">
+        <div class="step-header">
+          <div class="step-title-group">
+            <div class="step-number">6</div>
+            <div>
+              <h3>Konfigurasi Nginx (Reverse Proxy & Buffer-Free SSE)</h3>
+              <div class="step-meta">
+                <span class="step-time">⏱️ Estimasi: 4 Menit</span>
+                <span style="color:var(--text-dim);">•</span>
+                <span style="font-size:0.75rem;color:var(--accent-cyan);">Web Server</span>
+              </div>
+            </div>
+          </div>
+          <label class="step-done-label">
+            <input type="checkbox" class="step-checkbox" data-step="6">
+            <span>Tandai Selesai</span>
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:12px;">
+          Gunakan generator otomatis di bawah ini untuk menghasilkan blok konfigurasi Nginx yang sesuai dengan domain Anda:
+        </p>
+
+        <!-- Live Nginx Config Generator -->
+        <div class="generator-tool">
+          <div class="generator-title">
+            <span>⚙️</span> Generator Konfigurasi Nginx Sesuai Domain Anda
+          </div>
+          <div class="input-row">
+            <input type="text" id="gen-domain-input" class="input-field" placeholder="Ketik domain Anda, contoh: botliveanda.com" value="domainanda.com">
+            <button type="button" class="btn btn-primary" id="btn-update-nginx">Perbarui Konfigurasi</button>
+          </div>
+        </div>
+
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Buat File /etc/nginx/sites-available/shopee-live-bot</span>
+            <button type="button" class="btn-copy" data-target="code-nginx-block">📋 Salin</button>
+          </div>
+          <pre><code id="code-nginx-block">server {
+    listen 80;
+    server_name <span id="nginx-domain-slot">domainanda.com www.domainanda.com</span>;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # KRUSIAL UNTUK SSE (SERVER-SENT EVENTS) & REALTIME CHARTS
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+}</code></pre>
+        </div>
+
+        <p style="font-size:0.88rem; color:var(--text-muted); margin:12px 0 6px;">
+          Aktifkan konfigurasi di terminal:
+        </p>
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Aktivasi & Reload Nginx</span>
+            <button type="button" class="btn-copy" data-target="cmd-nginx-enable">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-nginx-enable">sudo ln -s /etc/nginx/sites-available/shopee-live-bot /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx</code></pre>
+        </div>
+      </section>
+
+      <!-- FASE 7: Pasang SSL Certbot -->
+      <section id="fase-7" class="step-section">
+        <div class="step-header">
+          <div class="step-title-group">
+            <div class="step-number">7</div>
+            <div>
+              <h3>Pasang Sertifikat SSL HTTPS Gratis (Certbot Let's Encrypt)</h3>
+              <div class="step-meta">
+                <span class="step-time">⏱️ Estimasi: 2 Menit</span>
+                <span style="color:var(--text-dim);">•</span>
+                <span style="font-size:0.75rem;color:var(--accent-cyan);">Security SSL</span>
+              </div>
+            </div>
+          </div>
+          <label class="step-done-label">
+            <input type="checkbox" class="step-checkbox" data-step="7">
+            <span>Tandai Selesai</span>
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:12px;">
+          Jalankan Certbot untuk mengamankan koneksi domain Anda dengan enkripsi gembok hijau HTTPS:
+        </p>
+
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Jalankan Certbot</span>
+            <button type="button" class="btn-copy" data-target="cmd-certbot">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-certbot">sudo certbot --nginx -d domainanda.com -d www.domainanda.com</code></pre>
+        </div>
+
+        <ul style="margin-left:20px; font-size:0.88rem; color:var(--text-muted); line-height:1.7;">
+          <li>Masukkan alamat email Anda untuk notifikasi perpanjangan.</li>
+          <li>Ketik <code>Y</code> untuk menyetujui Ketentuan Layanan.</li>
+          <li>Pilih opsi <strong>Redirect</strong> agar seluruh pengunjung dialihkan otomatis ke HTTPS.</li>
+        </ul>
+      </section>
+
+      <!-- FASE 8: Keamanan & UFW -->
+      <section id="fase-8" class="step-section">
+        <div class="step-header">
+          <div class="step-title-group">
+            <div class="step-number">8</div>
+            <div>
+              <h3>Proteksi Port dengan Firewall (UFW)</h3>
+              <div class="step-meta">
+                <span class="step-time">⏱️ Estimasi: 2 Menit</span>
+                <span style="color:var(--text-dim);">•</span>
+                <span style="font-size:0.75rem;color:var(--accent-cyan);">Hardening Server</span>
+              </div>
+            </div>
+          </div>
+          <label class="step-done-label">
+            <input type="checkbox" class="step-checkbox" data-step="8">
+            <span>Tandai Selesai</span>
+          </label>
+        </div>
+
+        <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:12px;">
+          Kunci akses port yang tidak diperlukan agar server Anda terhindar dari pemindaian liar:
+        </p>
+
+        <div class="code-box">
+          <div class="code-box-header">
+            <span class="code-box-title">Aktifkan Firewall UFW</span>
+            <button type="button" class="btn-copy" data-target="cmd-ufw">📋 Salin</button>
+          </div>
+          <pre><code id="cmd-ufw">sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw --force enable</code></pre>
+        </div>
+
+        <div class="alert alert-success">
+          <div class="alert-icon">🎉</div>
+          <div>
+            <strong>Selamat! Setup Cloud Server Selesai 100%!</strong><br>
+            Buka browser Anda di: <strong style="color:var(--accent-green);">https://domainanda.com</strong><br>
+            Masukkan PIN Access Gatekeeper (default <code>123456</code>), lalu hubungkan WhatsApp Gateway dan atur Proxy Gateway untuk memulai siaran live tanpa henti!
+          </div>
+        </div>
+      </section>
+
+      <!-- Accordion FAQ & Solusi Kendala -->
+      <section id="fase-faq" class="step-section">
+        <h3 style="margin-bottom:16px; font-size:1.25rem;">
+          <span>❓</span> Pertanyaan & Pemecahan Masalah Umum (FAQ)
+        </h3>
+
+        <div class="accordion-item">
+          <div class="accordion-header">
+            <span>1. Muncul error 502 Bad Gateway di browser setelah memasang Nginx</span>
+            <span class="accordion-icon">▼</span>
+          </div>
+          <div class="accordion-content">
+            Ini berarti aplikasi Node.js belum aktif di port 3000. Jalankan <code>pm2 status</code> di terminal SSH. Jika berstatus <em>errored</em> atau <em>stopped</em>, periksa penyebabnya dengan mengetik <code>pm2 logs shopee-live-view-bot</code>.
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <div class="accordion-header">
+            <span>2. Error: Cannot find module 'node:sqlite'</span>
+            <span class="accordion-icon">▼</span>
+          </div>
+          <div class="accordion-content">
+            Versi Node.js di server Anda masih di bawah versi 22. Jalankan perintah instalasi NodeSource v22.x pada Langkah 2, lalu ketik <code>node -v</code> untuk memastikan versi telah terpasang dengan benar.
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <div class="accordion-header">
+            <span>3. Grafik penonton atau terminal log real-time macet saat diakses via domain</span>
+            <span class="accordion-icon">▼</span>
+          </div>
+          <div class="accordion-content">
+            Pastikan baris <code>proxy_buffering off;</code> dan <code>proxy_read_timeout 86400s;</code> telah terpasang di file konfigurasi Nginx Anda. Fitur Server-Sent Events (SSE) membutuhkan transmisi paket instan tanpa jeda buffer Nginx.
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <div class="accordion-header">
+            <span>4. Certbot gagal memverifikasi sertifikat SSL domain</span>
+            <span class="accordion-icon">▼</span>
+          </div>
+          <div class="accordion-content">
+            Pastikan propagasi DNS A-Record sudah mengarah ke IP VPS Anda (coba <code>ping domainanda.com</code>). Jika Anda menggunakan Cloudflare, pastikan ikon awan disetel ke <strong>DNS Only (Grey Cloud)</strong> saat proses registrasi sertifikat berlangsung.
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // 1. Reading Progress Bar
+    window.addEventListener('scroll', () => {
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const currentScroll = window.scrollY;
+      const progress = (currentScroll / totalScroll) * 100;
+      document.getElementById('reading-progress').style.width = progress + '%';
+    });
+
+    // 2. Interactive 1-Click Copy Code
+    document.querySelectorAll('.btn-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const codeEl = document.getElementById(targetId);
+        if (!codeEl) return;
+
+        const textToCopy = codeEl.innerText.trim();
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          const originalText = btn.innerText;
+          btn.innerText = '✅ Tersalin!';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.innerText = originalText;
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      });
+    });
+
+    // 3. Step Checklist Progress with LocalStorage Persistence
+    const checkboxes = document.querySelectorAll('.step-checkbox');
+    const progressText = document.getElementById('progress-text');
+    const totalSteps = checkboxes.length;
+
+    function updateProgress() {
+      let completed = 0;
+      checkboxes.forEach(cb => {
+        const step = cb.getAttribute('data-step');
+        if (cb.checked) {
+          completed++;
+          localStorage.setItem('vps_step_' + step, 'done');
+        } else {
+          localStorage.removeItem('vps_step_' + step);
+        }
+      });
+      progressText.innerText = `${completed}/${totalSteps} Selesai`;
+    }
+
+    // Load saved checklist
+    checkboxes.forEach(cb => {
+      const step = cb.getAttribute('data-step');
+      if (localStorage.getItem('vps_step_' + step) === 'done') {
+        cb.checked = true;
+      }
+      cb.addEventListener('change', updateProgress);
+    });
+    updateProgress();
+
+    // Reset Checklist
+    document.getElementById('btn-reset-checklist').addEventListener('click', () => {
+      if (confirm('Reset seluruh checklist pengerjaan?')) {
+        checkboxes.forEach(cb => {
+          cb.checked = false;
+          const step = cb.getAttribute('data-step');
+          localStorage.removeItem('vps_step_' + step);
+        });
+        updateProgress();
+      }
+    });
+
+    // 4. In-Browser Secret Key Generator
+    function generateRandomHex(length) {
+      const chars = '0123456789abcdef';
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return result;
+    }
+
+    document.getElementById('btn-generate-secret').addEventListener('click', () => {
+      const newSecret = generateRandomHex(64);
+      document.getElementById('gen-secret-output').value = newSecret;
+    });
+
+    document.getElementById('btn-copy-secret').addEventListener('click', () => {
+      const secret = document.getElementById('gen-secret-output').value;
+      navigator.clipboard.writeText(secret).then(() => {
+        alert('Secret key 64-karakter berhasil disalin!');
+      });
+    });
+
+    // 5. Dynamic Nginx Config Generator
+    document.getElementById('btn-update-nginx').addEventListener('click', () => {
+      const domainInput = document.getElementById('gen-domain-input').value.trim();
+      if (!domainInput) return;
+
+      const domainSlot = document.getElementById('nginx-domain-slot');
+      domainSlot.innerText = `${domainInput} www.${domainInput}`;
+
+      const certbotCmd = document.getElementById('cmd-certbot');
+      certbotCmd.innerText = `sudo certbot --nginx -d ${domainInput} -d www.${domainInput}`;
+    });
+
+    // 6. Accordion Toggle
+    document.querySelectorAll('.accordion-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const item = header.parentElement;
+        item.classList.toggle('open');
+      });
+    });
+  </script>
+</body>
+</html>

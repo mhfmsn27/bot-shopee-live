@@ -1,0 +1,30 @@
+{
+  "name": "shopee-live-view-bot",
+  "version": "1.0.0",
+  "description": "Sistem Bot View Streaming Shopee Live 24 Jam Nonstop dengan Kontrol Retensi, Auto-Create Email & Identitas Akun, Proxy Pool Manager, dan WhatsApp Gateway.",
+  "main": "backend/src/server.js",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "dev": "node --watch backend/src/server.js"
+  },
+  "keywords": [
+    "shopee-live",
+    "view-bot",
+    "retention-controller",
+    "account-generator",
+    "proxy-manager",
+    "whatsapp-gateway"
+  ],
+  "author": "Enterprise Bot Architect",
+  "license": "ISC",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "https-proxy-agent": "^9.1.0",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4",
+    "socks-proxy-agent": "^10.1.0",
+    "ws": "^8.18.0"
+  }
+}
