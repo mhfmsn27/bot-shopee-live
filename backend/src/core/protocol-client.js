@@ -8,6 +8,7 @@ const https = require('https');
 const http = require('http');
 const tls = require('tls');
 const { URL } = require('url');
+const EventEmitter = require('events');
 
 const USER_AGENTS_MOBILE = [
   'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Shopee/3.19.10',
@@ -193,20 +194,29 @@ function buildSpoofedHeaders(params = {}) {
   const hasRealCookie = params.cookie && typeof params.cookie === 'string'
     && params.cookie.trim().length >= 10 && params.cookie.includes('SPC_');
 
-  const cookieHeader = hasRealCookie
+  let cookieHeader = hasRealCookie
     ? params.cookie.trim()
     : `SPC_F=${fp.deviceId}; SPC_T_ID=${fp.clientUuid}; language=id; shopee_webUnique_ccd=${fp.spcEc};`;
 
-  // Ekstrak SPC_F dari cookie untuk CSRF token (tervalidasi dari probe API nyata)
-  const spcFMatch = cookieHeader.match(/SPC_F=([^;]+)/);
-  const csrfToken = spcFMatch ? spcFMatch[1] : fp.deviceId;
+  // Ekstrak SPC_F dari cookie untuk CSRF token (tervalidasi dari probe API nyata Shopee)
+  let spcFMatch = cookieHeader.match(/SPC_F=([^;]+)/);
+  let csrfToken = spcFMatch ? spcFMatch[1] : null;
+
+  // Jika cookie belum memiliki SPC_F, injeksikan agar x-csrftoken dan Cookie['SPC_F'] selalu sinkron 100%
+  if (!csrfToken) {
+    csrfToken = fp.deviceId;
+    cookieHeader = `${cookieHeader.replace(/;?\s*$/, '')}; SPC_F=${csrfToken};`;
+  }
 
   const headers = {
     'User-Agent': userAgent,
-    'Accept': 'application/json',
+    'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
     'Origin': 'https://live.shopee.co.id',
     'Referer': `https://live.shopee.co.id/live/${params.roomId || ''}`,
+    'Client-Info': profile.platform === 'iOS' ? 'os=ios;platform=mobile' : 'os=android;platform=mobile',
+    'X-Livestreaming-Source': 'shopee',
+    'X-LS-SZ-TOKEN': params.szToken || fp.spcEc || `sz-${fp.deviceId}`,
     'x-shopee-client-uuid': fp.clientUuid,
     'x-shopee-device-id': fp.deviceId,
     'x-api-source': 'rn',
@@ -810,6 +820,360 @@ async function connectToLiveStream(playUrl, options = {}) {
   };
 }
 
+/**
+ * Persistent Video Stream Consumer (Continuous FLV/HLS Stream Drainer)
+ * Mempertahankan koneksi streaming persisten ke CDN Shopee Live (Tencent Cloud / Wangsu),
+ * mensimulasikan penonton aktif yang terus mengonsumsi video stream tanpa memakan RAM server.
+ */
+class PersistentStreamConsumer extends EventEmitter {
+  constructor(streamUrl, options = {}) {
+    super();
+    this.streamUrl = streamUrl;
+    this.options = options;
+    this.proxyAgent = options.proxyAgent || null;
+    this.bytesStreamed = 0;
+    this.chunksReceived = 0;
+    this.connected = false;
+    this.req = null;
+    this.res = null;
+    this.aborted = false;
+    this.startTime = null;
+    this.reconnectAttempts = 0;
+    this.maxReconnects = options.maxReconnects || 3;
+    // Throttled flow control (default ~18 KB/s ultra-hemat data: cukup menjaga CDN socket tetap open \u0026 aktif)
+    this.throttleBytesPerSec = options.throttleBytesPerSec !== undefined ? options.throttleBytesPerSec : 18000;
+    this.windowStart = 0;
+    this.windowBytes = 0;
+    this.throttleTimer = null;
+    this.healthyTimer = null;
+  }
+
+  start() {
+    if (this.aborted || this.connected) return this;
+    this.startTime = Date.now();
+    this.windowStart = Date.now();
+    this.windowBytes = 0;
+    try {
+      const parsedUrl = new URL(this.streamUrl);
+      const isHttps = parsedUrl.protocol === 'https:';
+      const httpLib = isHttps ? https : http;
+      const headers = {
+        'User-Agent': (this.options.fingerprint && this.options.fingerprint.deviceProfile && this.options.fingerprint.deviceProfile.userAgent) || USER_AGENTS_MOBILE[0],
+        'Accept': '*/*',
+        'Accept-Encoding': 'identity',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Referer': `https://live.shopee.co.id/live/${this.options.roomId || ''}`,
+        'Origin': 'https://live.shopee.co.id'
+      };
+
+      const reqOptions = {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || (isHttps ? 443 : 80),
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: 'GET',
+        headers,
+        agent: this.proxyAgent || (isHttps ? globalHttpsAgent : globalHttpAgent),
+        rejectUnauthorized: false
+      };
+
+      this.req = httpLib.request(reqOptions, (res) => {
+        this.res = res;
+        this.connected = res.statusCode >= 200 && res.statusCode < 400;
+        this.emit('connected', { status: res.statusCode, headers: res.headers });
+
+        if (this.connected) {
+          // Reset reconnect counter jika koneksi bertahan sehat selama 5 detik
+          if (this.healthyTimer) clearTimeout(this.healthyTimer);
+          this.healthyTimer = setTimeout(() => {
+            if (this.connected && !this.aborted) {
+              this.reconnectAttempts = 0;
+            }
+          }, 5000);
+        }
+
+        res.on('data', (chunk) => {
+          if (this.aborted) return;
+          const len = chunk.length;
+          this.bytesStreamed += len;
+          this.chunksReceived++;
+          this.windowBytes += len;
+
+          // Zero-allocation drainer: buang chunk buffer seketika
+          chunk = null;
+          if (this.chunksReceived % 10 === 0) {
+            this.emit('progress', {
+              bytesStreamed: this.bytesStreamed,
+              chunksReceived: this.chunksReceived,
+              activeSec: Math.floor((Date.now() - this.startTime) / 1000)
+            });
+          }
+
+          // Pacing / backpressure flow control (mencegah VPS bandwidth leak tanpa memutus TCP socket)
+          if (this.throttleBytesPerSec > 0 && this.windowBytes >= this.throttleBytesPerSec) {
+            const now = Date.now();
+            const elapsed = now - this.windowStart;
+            if (elapsed < 1000) {
+              try { res.pause(); } catch (e) {}
+              const waitTime = Math.max(50, 1000 - elapsed);
+              if (this.throttleTimer) clearTimeout(this.throttleTimer);
+              this.throttleTimer = setTimeout(() => {
+                if (!this.aborted && this.res) {
+                  this.windowStart = Date.now();
+                  this.windowBytes = 0;
+                  try { this.res.resume(); } catch (e) {}
+                }
+              }, waitTime);
+            } else {
+              this.windowStart = now;
+              this.windowBytes = 0;
+            }
+          }
+        });
+
+        res.on('end', () => {
+          const wasConnected = this.connected;
+          this.connected = false;
+          if (this.healthyTimer) clearTimeout(this.healthyTimer);
+          if (this.throttleTimer) clearTimeout(this.throttleTimer);
+          this.emit('ended', { bytesStreamed: this.bytesStreamed });
+          // Auto-reconnect jika stream terputus prematur dan belum di-abort
+          if (!this.aborted && wasConnected) {
+            if (this.reconnectAttempts < this.maxReconnects) {
+              this.reconnectAttempts++;
+              setTimeout(() => {
+                if (!this.aborted) this.start();
+              }, 1000);
+            } else {
+              this.emit('exhausted', { bytesStreamed: this.bytesStreamed, reason: 'max_reconnects_reached' });
+            }
+          }
+        });
+
+        res.on('error', (err) => {
+          const wasConnected = this.connected;
+          this.connected = false;
+          if (this.healthyTimer) clearTimeout(this.healthyTimer);
+          if (this.throttleTimer) clearTimeout(this.throttleTimer);
+          this.emit('error', err);
+          if (!this.aborted && wasConnected) {
+            if (this.reconnectAttempts < this.maxReconnects) {
+              this.reconnectAttempts++;
+              setTimeout(() => {
+                if (!this.aborted) this.start();
+              }, 1500);
+            } else {
+              this.emit('exhausted', { bytesStreamed: this.bytesStreamed, reason: 'max_reconnects_reached', error: err.message });
+            }
+          }
+        });
+      });
+
+      this.req.on('error', (err) => {
+        this.connected = false;
+        if (this.healthyTimer) clearTimeout(this.healthyTimer);
+        if (this.throttleTimer) clearTimeout(this.throttleTimer);
+        this.emit('error', err);
+        if (!this.aborted) {
+          if (this.reconnectAttempts < this.maxReconnects) {
+            this.reconnectAttempts++;
+            setTimeout(() => {
+              if (!this.aborted) this.start();
+            }, 1000);
+          } else {
+            this.emit('exhausted', { bytesStreamed: this.bytesStreamed, reason: 'req_error_exhausted', error: err.message });
+          }
+        }
+      });
+
+      this.req.end();
+    } catch (err) {
+      this.connected = false;
+      this.emit('error', err);
+      if (!this.aborted) {
+        if (this.reconnectAttempts < this.maxReconnects) {
+          this.reconnectAttempts++;
+          setTimeout(() => {
+            if (!this.aborted) this.start();
+          }, 1000);
+        } else {
+          this.emit('exhausted', { bytesStreamed: this.bytesStreamed, reason: 'start_catch_exhausted', error: err.message });
+        }
+      }
+    }
+    return this;
+  }
+
+  stop() {
+    this.aborted = true;
+    this.connected = false;
+    if (this.healthyTimer) clearTimeout(this.healthyTimer);
+    if (this.throttleTimer) clearTimeout(this.throttleTimer);
+    if (this.res) {
+      try { this.res.destroy(); } catch (e) {}
+    }
+    if (this.req) {
+      try { this.req.destroy(); } catch (e) {}
+    }
+    this.emit('stopped', { bytesStreamed: this.bytesStreamed });
+  }
+}
+
+function createPersistentStreamConsumer(streamUrl, options = {}) {
+  return new PersistentStreamConsumer(streamUrl, options);
+}
+
+/**
+ * ViewerRegistrationClient - Shopee Live Polling & Viewer Keepalive Client
+ * Mengelola sesi viewer resmi di sisi Shopee Live melalui endpoint /session/{id}/join
+ * dan polling periodik /session/{id}, menangani anti-bot throttle (90309999) dan keepalive.
+ */
+class ViewerRegistrationClient extends EventEmitter {
+  constructor(roomId, options = {}) {
+    super();
+    this.roomId = roomId;
+    this.options = options;
+    this.proxyAgent = options.proxyAgent || null;
+    this.cookie = options.cookie || null;
+    this.fingerprint = options.fingerprint || generateDeviceFingerprint(options.deviceIndex);
+    this.pollIntervalSec = options.pollIntervalSec || 15;
+    this.networkTimeout = options.networkTimeout || 5000;
+    
+    this.joined = false;
+    this.active = false;
+    this.pollTimer = null;
+    this.heartbeatCount = 0;
+    this.viewerCount = 0;
+    this.roomData = null;
+    this.isOnline = true;
+  }
+
+  async join() {
+    if (this.active) return { success: this.joined };
+    this.active = true;
+
+    // 1. Ambil info metadata room terkini
+    const info = await fetchLiveRoomInfo(this.roomId, {
+      cookie: this.cookie,
+      fingerprint: this.fingerprint,
+      proxyAgent: this.proxyAgent,
+      timeout: this.networkTimeout
+    });
+
+    if (info && info.errCode === 90309999) {
+      this.emit('throttled', { roomId: this.roomId, errCode: 90309999 });
+      return { success: false, throttled: true, error: info.error };
+    }
+
+    if (info && info.roomData) {
+      this.roomData = info.roomData;
+      this.viewerCount = info.roomData.viewerCount || 0;
+      this.isOnline = info.online;
+    }
+
+    // 2. Kirim join session API
+    const joinRes = await enterLiveRoom(this.roomId, {
+      cookie: this.cookie,
+      fingerprint: this.fingerprint,
+      proxyAgent: this.proxyAgent,
+      timeout: this.networkTimeout
+    });
+
+    this.joined = joinRes.joinSuccess || joinRes.streamConnected;
+    this.emit('joined', {
+      roomId: this.roomId,
+      joined: this.joined,
+      joinStatus: joinRes.joinStatus,
+      svBlocked: joinRes.svBlocked,
+      roomData: this.roomData
+    });
+
+    this.scheduleNextPoll();
+    return { success: true, joined: this.joined, roomData: this.roomData };
+  }
+
+  scheduleNextPoll() {
+    if (!this.active) return;
+    const jitter = (Math.random() * 0.4 - 0.2) * this.pollIntervalSec;
+    const delayMs = Math.max(5000, Math.round((this.pollIntervalSec + jitter) * 1000));
+
+    this.pollTimer = setTimeout(async () => {
+      if (!this.active) return;
+      await this.poll();
+      this.scheduleNextPoll();
+    }, delayMs);
+  }
+
+  async poll() {
+    if (!this.active) return;
+    this.heartbeatCount++;
+
+    try {
+      const info = await fetchLiveRoomInfo(this.roomId, {
+        cookie: this.cookie,
+        fingerprint: this.fingerprint,
+        proxyAgent: this.proxyAgent,
+        timeout: this.networkTimeout
+      });
+
+      if (info && (info.errCode === 90309999 || info.isThrottled)) {
+        this.emit('throttled', { roomId: this.roomId, errCode: 90309999 });
+        return;
+      }
+
+      if (info && info.roomData) {
+        this.roomData = info.roomData;
+        this.viewerCount = info.roomData.viewerCount || 0;
+        this.isOnline = info.online;
+
+        this.emit('heartbeat', {
+          count: this.heartbeatCount,
+          viewerCount: this.viewerCount,
+          isOnline: this.isOnline,
+          playUrl: info.roomData.playUrl
+        });
+
+        if (!this.isOnline) {
+          this.emit('ended', { roomId: this.roomId });
+        }
+      }
+
+      // Re-affirm /join secara periodik (setiap 5 siklus polling) untuk menjaga status viewer aktif
+      if (this.heartbeatCount % 5 === 0) {
+        try {
+          await enterLiveRoom(this.roomId, {
+            cookie: this.cookie,
+            fingerprint: this.fingerprint,
+            proxyAgent: this.proxyAgent,
+            timeout: 3000
+          });
+        } catch (e) {}
+      }
+    } catch (err) {
+      this.emit('error', err);
+    }
+  }
+
+  stop() {
+    this.active = false;
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
+    leaveLiveRoom(this.roomId, {
+      cookie: this.cookie,
+      fingerprint: this.fingerprint,
+      proxyAgent: this.proxyAgent
+    }).catch(() => {});
+    this.emit('stopped');
+  }
+}
+
+function createViewerRegistrationClient(roomId, options = {}) {
+  return new ViewerRegistrationClient(roomId, options);
+}
+
 module.exports = {
   USER_AGENTS_MOBILE,
   DEVICE_PROFILES,
@@ -826,9 +1190,14 @@ module.exports = {
   sendViewerPingHeartbeat,
   probeVideoStreamChunks,
   connectToLiveStream,
+  PersistentStreamConsumer,
+  createPersistentStreamConsumer,
+  ViewerRegistrationClient,
+  createViewerRegistrationClient,
   enterLiveRoom,
   leaveLiveRoom,
   sendLikeAction,
   sendChatMessage,
   sendCartClickAction
 };
+

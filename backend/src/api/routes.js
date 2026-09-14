@@ -17,6 +17,7 @@ const smsGateway = require('../identity/sms-gateway');
 const realRegistrationPipeline = require('../identity/real-registration-pipeline');
 const sqliteManager = require('../db/sqlite-manager');
 const authManager = require('../security/auth-manager');
+const protocolClient = require('../core/protocol-client');
 
 // Inisialisasi pengawas keamanan proaktif (Canary Watchdog)
 canaryWatchdog.start();
@@ -279,6 +280,80 @@ router.post('/campaign/stop', async (req, res) => {
   }
 });
 
+/**
+ * DIAGNOSTIK KONEKTIVITAS STREAM SHOPEE LIVE
+ * Menguji keterjangkauan room, CDN video stream (FLV/HLS), dan status proteksi WAF Shopee
+ */
+router.post('/campaigns/test-connectivity', async (req, res) => {
+  const { urlOrRoomId, proxyId, cookie } = req.body || {};
+  if (!urlOrRoomId) {
+    return res.status(400).json({ success: false, message: 'URL atau Room ID wajib diisi.' });
+  }
+
+  const roomId = protocolClient.parseLiveRoomId(urlOrRoomId);
+  if (!roomId) {
+    return res.status(400).json({ success: false, message: 'Format Room ID tidak valid.' });
+  }
+
+  let proxyAgent = null;
+  let proxyInfo = null;
+  if (proxyId) {
+    const p = proxyManager.getProxyById(proxyId);
+    if (p) {
+      proxyAgent = proxyManager.getProxyAgent(p);
+      proxyInfo = { id: p.id, ip: p.ip, port: p.port, protocol: p.protocol };
+    }
+  }
+
+  try {
+    const startTime = Date.now();
+    const roomInfo = await protocolClient.fetchLiveRoomInfo(roomId, {
+      proxyAgent,
+      cookie,
+      timeout: 6000
+    });
+
+    let cdnProbe = null;
+    const playUrl = roomInfo.roomData && roomInfo.roomData.playUrl;
+    if (playUrl && typeof playUrl === 'string' && playUrl.startsWith('http')) {
+      try {
+        cdnProbe = await protocolClient.probeVideoStreamChunks(playUrl, {
+          proxyAgent,
+          timeout: 4000
+        });
+      } catch (e) {
+        cdnProbe = { success: false, error: e.message };
+      }
+    }
+
+    const isWafBlocked = roomInfo.errCode === 90309999 || (roomInfo.status === 403 && !roomInfo.success);
+
+    res.json({
+      success: true,
+      roomId,
+      online: !!roomInfo.online,
+      status: roomInfo.status || 200,
+      latencyMs: roomInfo.latencyMs || (Date.now() - startTime),
+      roomData: roomInfo.roomData || null,
+      cdnProbe,
+      proxy: proxyInfo || { mode: 'direct' },
+      antiBotStatus: {
+        isWafBlocked,
+        errCode: roomInfo.errCode || null,
+        recommendation: isWafBlocked
+          ? 'IP terdeteksi Datacenter/Ter-throttle oleh Shopee. Gunakan proxy Residential Indonesia dan akun ber-cookie SPC_ otentik.'
+          : 'Koneksi gateway Shopee Live normal. Siap dijalankan dengan Stream Drainer.'
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      roomId,
+      error: err.message
+    });
+  }
+});
+
 router.get('/logs', (req, res) => {
   res.json({ success: true, logs: retentionController.logsBuffer });
 });
@@ -376,6 +451,20 @@ router.post('/accounts/validate-cookies', (req, res) => {
 router.post('/accounts/:id/validate-cookie', (req, res) => {
   const result = accountManager.validateSessionCookie(req.params.id);
   res.json(result);
+});
+
+// Ikat session cookie asli ke akun tertentu
+router.post('/accounts/:id/bind-cookies', (req, res) => {
+  try {
+    const rawText = req.body.cookies || req.body.cookieString || req.body.rawCookies || req.body.rawText || '';
+    const result = accountManager.bindRealCookiesToAccount(req.params.id, rawText);
+    if (result.success) {
+      retentionController.addLog('SUCCESS', `Cookie otentik berhasil diikat ke akun @${result.account.username} (${result.account.phoneNumber || 'ID: ' + req.params.id}). Status akun kini Siap Pakai.`);
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Ambil status & saldo provider SMS Gateway

@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buku Panduan Lengkap Operasional - Shopee Live View Bot & Automation System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Base & Surfaces */
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-card-subtle: #f1f5f9;
+      --bg-sidebar: #f8fafc;
+      --border-color: #e2e8f0;
+      --border-strong: #cbd5e1;
+      
+      /* Brand & Highlights */
+      --shopee-orange: #ee4d2d;
+      --shopee-orange-soft: #fff7ed;
+      --shopee-orange-border: #ffedd5;
+      --primary-blue: #0284c7;
+      --primary-blue-soft: #f0f9ff;
+      --cyber-blue: #0284c7;
+      --emerald: #059669;
+      --emerald-soft: #ecfdf5;
+      --purple: #7c3aed;
+      --purple-soft: #f5f3ff;
+      --amber: #d97706;
+      --amber-soft: #fffbeb;
+      --rose: #e11d48;
+      --rose-soft: #fff1f2;
+
+      /* High-contrast Typography */
+      --text-main: #0f172a;        /* Slate 900 */
+      --text-body: #334155;        /* Slate 700 */
+      --text-muted: #475569;       /* Slate 600 */
+      --text-dim: #64748b;         /* Slate 500 */
+      
+      /* Shadows & Radii */
+      --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+      --shadow-card: 0 2px 8px -1px rgba(15, 23, 42, 0.06), 0 1px 3px -1px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+
+      /* Fonts */
+      --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(238, 77, 45, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(2, 132, 199, 0.03) 0%, transparent 40%);
+      color: var(--text-body);
+      font-family: var(--font-body);
+      line-height: 1.7;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-page);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Top Sticky Navbar */
+    .top-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 1.15rem;
+      color: var(--text-main);
+      text-decoration: none;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-badge {
+      background: var(--shopee-orange-soft);
+      color: var(--shopee-orange);
+      border: 1px solid var(--shopee-orange-border);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .nav-search {
+      position: relative;
+      width: 340px;
+    }
+
+    .nav-search input {
+      width: 100%;
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 9px 16px 9px 38px;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.2s ease;
+      font-family: var(--font-body);
+    }
+
+    .nav-search input:focus {
+      background: #ffffff;
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+
+    .nav-search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-quick {
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-quick:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-card);
+    }
+
+    .btn-quick:active {
+      transform: scale(0.98);
+    }
+
+    .btn-quick-primary {
+      background: linear-gradient(135deg, var(--shopee-orange) 0%, #ff5722 100%);
+      border: 1px solid #d73a19;
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(238, 77, 45, 0.25);
+    }
+
+    .btn-quick-primary:hover {
+      background: linear-gradient(135deg, #f05436 0%, #ee4d2d 100%);
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(238, 77, 45, 0.35);
+    }
+
+    /* Main Container Layout */
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 32px 28px 80px 28px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 36px;
+    }
+
+    /* Sidebar Navigation (TOC) */
+    .sidebar {
+      position: sticky;
+      top: 80px;
+      height: calc(100vh - 100px);
+      overflow-y: auto;
+      padding-right: 12px;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    .toc-group-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+      margin: 20px 0 8px 10px;
+    }
+
+    .toc-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.86rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.18s ease;
+      border-left: 3px solid transparent;
+      user-select: none;
+    }
+
+    .toc-link:hover {
+      color: var(--text-main);
+      background: #f1f5f9;
+      transform: translateX(2px);
+    }
+
+    .toc-link.active {
+      color: var(--shopee-orange);
+      background: var(--shopee-orange-soft);
+      border-left-color: var(--shopee-orange);
+      font-weight: 700;
+    }
+
+    .toc-icon {
+      font-size: 1rem;
+    }
+
+    /* Content Area */
+    .content-area {
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, #ffffff 0%, #fffbf8 50%, #f0f9ff 100%);
+      border: 1px solid #fed7aa;
+      border-radius: var(--radius-lg);
+      padding: 36px 36px 32px 36px;
+      margin-bottom: 36px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #c2410c;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+
+    .hero-title {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 12px;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    .hero-desc {
+      font-size: 0.98rem;
+      color: var(--text-muted);
+      max-width: 820px;
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+
+    .hero-quick-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .meta-pill {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .meta-pill-label {
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .meta-pill-val {
+      color: var(--text-main);
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    /* Section Cards */
+    .guide-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 34px;
+      margin-bottom: 32px;
+      position: relative;
+      box-shadow: var(--shadow-card);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .guide-section:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-md);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-num-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--shopee-orange-soft);
+      border: 1px solid var(--shopee-orange-border);
+      color: var(--shopee-orange);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+
+    .section-subtitle {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      line-height: 1.4;
+    }
+
+    /* Subsections & Headings */
+    h3.sub-title {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--primary-blue);
+      margin: 26px 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    h4.mini-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin: 18px 0 8px 0;
+    }
+
+    p {
+      color: var(--text-body);
+      margin-bottom: 14px;
+      line-height: 1.7;
+    }
+
+    strong {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    code {
+      font-family: var(--font-mono);
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+
+    /* Step Cards / Workflow */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .step-card {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .step-card:hover {
+      background: #ffffff;
+      border-color: #93c5fd;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-card);
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--primary-blue);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.75rem;
+      margin-bottom: 10px;
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: 0.94rem;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .step-desc {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 0;
+    }
+
+    /* Alerts and Callouts */
+    .callout {
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      margin: 18px 0;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      border: 1px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .callout-content {
+      flex: 1;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 4px;
+    }
+
+    .callout-desc {
+      font-size: 0.86rem;
+      margin-bottom: 0;
+      line-height: 1.6;
+    }
+
+    .callout-pro {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: #7c2d12;
+    }
+    .callout-pro .callout-title { color: #c2410c; }
+    .callout-pro .callout-desc { color: #9a3412; }
+
+    .callout-info {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+      color: #0c4a6e;
+    }
+    .callout-info .callout-title { color: #0284c7; }
+    .callout-info .callout-desc { color: #0369a1; }
+
+    .callout-success {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #064e3b;
+    }
+    .callout-success .callout-title { color: #059669; }
+    .callout-success .callout-desc { color: #047857; }
+
+    .callout-warning {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #78350f;
+    }
+    .callout-warning .callout-title { color: #d97706; }
+    .callout-warning .callout-desc { color: #b45309; }
+
+    /* Code Blocks (High-contrast Developer Documentation Style) */
+    .code-box {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: var(--radius-md);
+      margin: 16px 0;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .code-header {
+      background: #1e293b;
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .btn-copy-code {
+      background: #334155;
+      border: 1px solid #475569;
+      color: #f1f5f9;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn-copy-code:hover {
+      background: var(--primary-blue);
+      border-color: var(--primary-blue);
+      color: #ffffff;
+    }
+
+    .code-content {
+      padding: 14px 18px;
+      overflow-x: auto;
+      font-size: 0.86rem;
+      line-height: 1.65;
+      color: #f8fafc;
+    }
+
+    .code-content::-webkit-scrollbar {
+      height: 5px;
+    }
+    .code-content::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    /* Comparison & Specification Tables */
+    .custom-table-wrapper {
+      overflow-x: auto;
+      margin: 18px 0;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      background: #ffffff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.86rem;
+    }
+
+    .custom-table th {
+      background: #f8fafc;
+      color: var(--text-main);
+      font-weight: 700;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      font-family: var(--font-heading);
+    }
+
+    .custom-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--text-body);
+    }
+
+    .custom-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .custom-table tr:hover td {
+      background: #f8fafc;
+    }
+
+    /* Badges */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-warning { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-danger { background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }
+    .badge-cyan { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+
+    /* Infographic Diagram Cards */
+    .diagram-container {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: var(--radius-md);
+      padding: 22px;
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .diagram-flow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .flow-node {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      text-align: center;
+      flex: 1;
+      min-width: 140px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .flow-node-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--text-main);
+    }
+
+    .flow-node-sub {
+      font-size: 0.74rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .flow-arrow {
+      color: var(--primary-blue);
+      font-size: 1.3rem;
+      font-weight: 800;
+    }
+
+    /* FAQ Accordion */
+    .faq-item {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .faq-question {
+      padding: 14px 18px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      user-select: none;
+    }
+
+    .faq-question:hover {
+      background: #f1f5f9;
+    }
+
+    .faq-answer {
+      padding: 0 18px 16px 18px;
+      color: var(--text-body);
+      font-size: 0.86rem;
+      line-height: 1.65;
+      display: none;
+      border-top: 1px solid var(--border-color);
+      padding-top: 12px;
+    }
+
+    .faq-item.open {
+      background: #ffffff;
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .faq-item.open .faq-answer {
+      display: block;
+    }
+
+    .faq-item.open .faq-chevron {
+      transform: rotate(180deg);
+    }
+
+    .faq-chevron {
+      transition: transform 0.2s;
+      color: var(--text-dim);
+    }
+
+    /* Floating Toast Notification */
+    .toast-msg {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: none;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+      z-index: 999;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Responsive Queries */
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        display: none;
+      }
+      .hero-title {
+        font-size: 1.8rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .top-navbar {
+        padding: 10px 16px;
+      }
+      .nav-search {
+        display: none;
+      }
+      .container {
+        padding: 16px 14px 60px 14px;
+      }
+      .hero-banner {
+        padding: 24px 20px;
+      }
+      .guide-section {
+        padding: 22px 18px;
+      }
+      .hero-title {
+        font-size: 1.45rem;
+      }
+      .section-title {
+        font-size: 1.2rem;
+      }
+      .hero-quick-meta {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .meta-pill {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
+    /* Print Stylesheet for Formal PDF Export */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 12pt;
+      }
+      .top-navbar,
+      .sidebar,
+      .btn-copy-code,
+      .nav-actions,
+      .toast-msg {
+        display: none !important;
+      }
+      .container {
+        display: block !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .guide-section {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        page-break-inside: avoid;
+        margin-bottom: 24px !important;
+      }
+      .hero-banner {
+        box-shadow: none !important;
+        border: 1px solid #999 !important;
+      }
+      .code-box {
+        background: #f8fafc !important;
+        color: #000 !important;
+        border: 1px solid #ccc !important;
+      }
+      .code-content {
+        color: #000 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================= -->
+  <!-- TOP NAVIGATION BAR -->
+  <!-- ========================================================================= -->
+  <header class="top-navbar">
+    <a href="#" class="brand-logo">
+      <span style="color:#ee4d2d;font-size:1.4rem;">⚡</span>
+      <span>SHOPEE LIVE BOT</span>
+      <span class="brand-badge">PANDUAN OPERASIONAL</span>
+    </a>
+
+    <div class="nav-search">
+      <span class="nav-search-icon">🔍</span>
+      <input type="text" id="quick-search-input" placeholder="Cari fitur, proxy, cookie, trik... (Ctrl+K)">
+    </div>
+
+    <div class="nav-actions">
+      <a href="http://localhost:3000" target="_blank" class="btn-quick btn-quick-primary">
+        🚀 Buka Dashboard
+      </a>
+      <button class="btn-quick" onclick="window.print()">🖨️ Cetak PDF</button>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN CONTAINER -->
+  <!-- ========================================================================= -->
+  <div class="container">
+
+    <!-- SIDEBAR NAVIGATION (TABLE OF CONTENTS) -->
+    <aside class="sidebar">
+      <div class="toc-group-title">Navigasi Cepat</div>
+      <a href="#bab-1" class="toc-link active"><span class="toc-icon">🔐</span> Bab 1: Login & Akses</a>
+      <a href="#bab-2" class="toc-link"><span class="toc-icon">🌐</span> Bab 2: Proxy Setup & Rasio</a>
+      <a href="#bab-3" class="toc-link"><span class="toc-icon">🔑</span> Bab 3: Ekstrak Cookie Asli</a>
+      <a href="#bab-4" class="toc-link"><span class="toc-icon">🚀</span> Bab 4: Buat Kampanye Live</a>
+      <a href="#bab-5" class="toc-link"><span class="toc-icon">💬</span> Bab 5: Auto Like & Chat</a>
+      <a href="#bab-6" class="toc-link"><span class="toc-icon">⏱️</span> Bab 6: Jadwal Siaran</a>
+      <a href="#bab-7" class="toc-link"><span class="toc-icon">🛡️</span> Bab 7: Health & Failover</a>
+      <a href="#bab-8" class="toc-link"><span class="toc-icon">📊</span> Bab 8: Laporan Klien</a>
+      <a href="#bab-9" class="toc-link"><span class="toc-icon">💡</span> Bab 9: FAQ & Tips Sukses</a>
+    </aside>
+
+    <!-- CONTENT AREA -->
+    <main class="content-area">
+
+      <!-- HERO BANNER -->
+      <section class="hero-banner">
+        <div class="hero-tag">🔥 Dokumen Resmi Pengoperasian Mandiri</div>
+        <h1 class="hero-title">Panduan Lengkap Operasional Sistem Bot Shopee Live</h1>
+        <p class="hero-desc">
+          Panduan langkah demi langkah yang dirancang khusus agar siapapun dapat mengoperasikan sistem otomasi siaran Shopee Live secara profesional: mulai dari login, input proxy, penarikan ribuan penonton, interaksi chat natural, hingga penyerahan laporan kerja ke klien.
+        </p>
+
+        <div class="hero-quick-meta">
+          <div class="meta-pill">
+            <span class="meta-pill-label">Akses Dashboard:</span>
+            <span class="meta-pill-val" style="color:var(--primary-blue);">http://localhost:3000</span>
+          </div>
+          <div class="meta-pill">
+            <span class="meta-pill-label">Password Master:</span>
+            <span class="meta-pill-val" style="color:var(--shopee-orange); font-weight:700;">shopee@admin2026</span>
+          </div>
+          <div class="meta-pill">
+            <span class="meta-pill-label">Status Bitrate:</span>
+            <span class="meta-pill-val" style="color:var(--emerald);">18 KB/s (Hemat 60%)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 1: MEMULAI & LOGIN GATEKEEPER -->
+      <!-- ===================================================================== -->
+      <section id="bab-1" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">01</div>
+          <div>
+            <h2 class="section-title">Memulai Sistem & Login Akses Master</h2>
+            <div class="section-subtitle">Cara menyalakan server dan membuka dashboard antarmuka web</div>
+          </div>
+        </div>
+
+        <p>Aplikasi ini berbasis web modern lokal. Anda tidak perlu koneksi internet untuk membuka dashboard-nya, cukup jalankan server Node.js di komputer/laptop Anda.</p>
+
+        <h3 class="sub-title"><span>▶️</span> Langkah 1.1: Menjalankan Server di Terminal</h3>
+        <p>Buka <strong>PowerShell</strong> atau <strong>Command Prompt (CMD)</strong> di folder aplikasi, lalu jalankan perintah berikut:</p>
+
+        <div class="code-box">
+          <div class="code-header">
+            <span>Terminal PowerShell / Command Prompt</span>
+            <button class="btn-copy-code" onclick="copySnippet('npm start', this)">📋 Salin</button>
+          </div>
+          <div class="code-content">npm start</div>
+        </div>
+
+        <p>Tunggu sekitar 2 detik hingga muncul teks konfirmasi hijau:</p>
+        <div class="code-box" style="border-left: 3px solid var(--emerald);">
+          <div class="code-content" style="color:#34d399;">
+            🚀 SHOPEE LIVE VIEW BOT APPS - RUNNING SUCCESSFULLY<br>
+            🌐 Dashboard URL: http://localhost:3000<br>
+            ⏱️  Status: Siap melayani siaran live streaming 24 jam nonstop
+          </div>
+        </div>
+
+        <h3 class="sub-title"><span>🔓</span> Langkah 1.2: Membuka Dashboard & Gatekeeper Lock</h3>
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-badge">1</div>
+            <div class="step-title">Buka Browser</div>
+            <div class="step-desc">Buka Google Chrome, Microsoft Edge, atau browser favorit Anda, lalu ketik alamat: <code>http://localhost:3000</code>.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">2</div>
+            <div class="step-title">Masukkan Password</div>
+            <div class="step-desc">Jika muncul layar perlindungan <strong>Gatekeeper Lock</strong>, masukkan password master default: <code>shopee@admin2026</code> lalu klik <strong>Buka Kunci</strong>.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">3</div>
+            <div class="step-title">Dashboard Terbuka</div>
+            <div class="step-desc">Dashboard utama akan terbuka dengan tampilan visual status sistem, grafik metrik, dan tab navigasi lengkap.</div>
+          </div>
+        </div>
+
+        <div class="callout callout-info">
+          <div class="callout-icon">💡</div>
+          <div class="callout-content">
+            <div class="callout-title">Ingin Mengubah Password Keamanan?</div>
+            <div class="callout-desc">Di pojok kanan atas Dashboard, klik ikon <strong>⚙️ Pengaturan Keamanan</strong>. Anda dapat mengganti password master sesuai keinginan Anda atau mengatur durasi auto-lock saat komputer ditinggalkan.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 2: MANAJEMEN PROXY & RASIO BOT -->
+      <!-- ===================================================================== -->
+      <section id="bab-2" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">02</div>
+          <div>
+            <h2 class="section-title">Manajemen Proxy & Rasio Pembagian Bot</h2>
+            <div class="section-subtitle">Memasukkan proxy SOCKS5/HTTP dan trik agar bot tidak saling bentrok</div>
+          </div>
+        </div>
+
+        <p>
+          Shopee Live memiliki sistem deteksi keamanan bernama <strong>Shopee Shield WAF</strong>. Untuk dapat menaikkan jumlah penonton tanpa terblokir status 403 kode <code>90309999</code>, sistem Anda <strong>wajib</strong> menggunakan proxy bertipe <strong>Residential (IP Perumahan)</strong> atau <strong>Mobile Proxy (4G/5G)</strong>.
+        </p>
+
+        <h3 class="sub-title"><span>⚙️</span> Langkah 2.1: Format Input Proxy yang Didukung</h3>
+        <p>Anda bisa memasukkan proxy satu per satu atau import puluhan proxy sekaligus dengan format standar:</p>
+
+        <div class="code-box">
+          <div class="code-header">
+            <span>Format Penulisan Proxy (IP:Port:Username:Password)</span>
+            <button class="btn-copy-code" onclick="copySnippet('103.129.150.67:20000:username:password\nsocks5://user:pass@182.8.179.127:20000', this)">📋 Salin Contoh</button>
+          </div>
+          <div class="code-content">
+# Format 1: IP:Port:Username:Password (Paling Umum)<br>
+103.129.150.67:20000:username:password<br><br>
+# Format 2: URL SOCKS5 Lengkap<br>
+socks5://username:password@182.8.179.127:20000<br><br>
+# Format 3: Rotating Gateway dengan Dynamic Session (Contoh 711proxy):<br>
+global.rotip.711proxy.com:20000:USER085641-zone-custom-region-ID-session-91715830:c7df05
+          </div>
+        </div>
+
+        <h3 class="sub-title"><span>🔄</span> Langkah 2.2: Cara Input Proxy di Dashboard</h3>
+        <ol style="margin-left: 20px; color: var(--text-muted); line-height: 1.8;">
+          <li>Klik Tab <strong>Proxy Manager</strong> di navigasi atas Dashboard.</li>
+          <li>Klik tombol <strong>➕ Tambah Proxy Baru</strong> (atau <strong>📋 Import Massal</strong> jika punya banyak).</li>
+          <li>Pilih Protokol: <strong>SOCKS5</strong> (atau HTTP jika proxy Anda bertipe HTTP).</li>
+          <li>Pilih Tipe: <strong>Residential</strong> atau <strong>Mobile</strong>.</li>
+          <li>Klik <strong>Simpan &amp; Uji Latensi</strong>. Sistem akan langsung menguji respon ping (ms) dan memvalidasi apakah IP tersebut aktif.</li>
+        </ol>
+
+        <h3 class="sub-title"><span>⚖️</span> Aturan Rasio: 1 Proxy Bisa Digunakan Berapa Bot?</h3>
+
+        <div class="diagram-container">
+          <div class="diagram-flow">
+            <div class="flow-node">
+              <div class="flow-node-title">1 Proxy Statis</div>
+              <div class="flow-node-sub">1 IP Tetap (Contoh: MyRepublic)</div>
+            </div>
+            <div class="flow-arrow">➔</div>
+            <div class="flow-node" style="border-color:var(--emerald);">
+              <div class="flow-node-title">2 s/d 3 Bot Viewers</div>
+              <div class="flow-node-sub">Rasio Sangat Alami (Mirip WiFi Rumah)</div>
+            </div>
+            <div class="flow-arrow">➔</div>
+            <div class="flow-node">
+              <div class="flow-node-title">Server Shopee Live</div>
+              <div class="flow-node-sub">100% Lolos Tanpa Terdeteksi</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="custom-table-wrapper">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Tipe Proxy yang Anda Gunakan</th>
+                <th>Rasio Bot Ideal</th>
+                <th>Kapasitas Penonton</th>
+                <th>Penjelasan Lapangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>IP Statis Tunggal (Static ISP)</strong></td>
+                <td><span class="badge-status badge-success">2 – 3 Bot per 1 IP</span></td>
+                <td>Jika punya 100 IP = <strong>200 – 300 View</strong></td>
+                <td>Meniru kondisi wajar di mana dalam 1 rumah ada 2-3 orang menonton live yang sama lewat WiFi bersama.</td>
+              </tr>
+              <tr>
+                <td><strong>Rotating Gateway (Dynamic Session)</strong><br><small style="color:var(--cyber-blue);">Contoh: 711proxy / Webshare Dynamic</small></td>
+                <td><span class="badge-status badge-cyan">1 Gateway = Unlimited Bot</span></td>
+                <td>1 Port = <strong>100 s/d 1.000+ View</strong></td>
+                <td>Sistem bot kita otomatis mengganti kode <code>session-XXXXX</code> per bot, sehingga setiap bot keluar dengan IP yang berbeda-beda secara otomatis!</td>
+              </tr>
+              <tr>
+                <td><strong>Modem USB 4G Dongle (DIY)</strong></td>
+                <td><span class="badge-status badge-warning">30 – 50 Bot per Modem</span></td>
+                <td>1 Modem = <strong>50 View</strong></td>
+                <td>Kecepatan 4G seluler (20 Mbps) mampu menampung 50 bot viewer video secara simultan.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 3: EKSTRAKSI COOKIE & MANAJEMEN AKUN -->
+      <!-- ===================================================================== -->
+      <section id="bab-3" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">03</div>
+          <div>
+            <h2 class="section-title">Ekstraksi Cookie Asli Shopee &amp; Akun</h2>
+            <div class="section-subtitle">Trik 5 detik mengambil cookie asli dari browser untuk meramaikan chat</div>
+          </div>
+        </div>
+
+        <p>
+          Sistem kita menggunakan <strong>Sistem Hibrida (Hybrid Architecture)</strong>:
+        </p>
+        <ul style="margin-left: 20px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.8;">
+          <li><strong>Guest Viewers (Tanpa Login)</strong>: Bertugas mendongkrak angka view counter ke ratusan atau ribuan penonton (murni via koneksi video CDN yang hemat data).</li>
+          <li><strong>Anchor Viewers (Akun Otentik Ber-cookie)</strong>: Bertugas memunculkan avatar foto di daftar penonton, mengirimkan komentar chat ("spill promo kak"), dan melakukan tap love otomatis.</li>
+        </ul>
+
+        <h3 class="sub-title"><span>⚡</span> Cara Mengambil Cookie Asli Shopee (Hanya 5 Detik!)</h3>
+        <p>Anda tidak perlu menginstal ekstensi browser yang mencurigakan. Cukup gunakan skrip 1-baris resmi berikut:</p>
+
+        <div class="code-box">
+          <div class="code-header">
+            <span>Skrip Ekstraktor Cookie Shopee (DevTools Console)</span>
+            <button class="btn-copy-code" onclick="copySnippet(`copy(document.cookie.split('; ').filter(x=>x.startsWith('SPC_')||x.startsWith('shopee_')).join('; ') + ';')`, this)">📋 Salin Skrip 1-Klik</button>
+          </div>
+          <div class="code-content" style="color:#38bdf8;">
+            copy(document.cookie.split('; ').filter(x=>x.startsWith('SPC_')||x.startsWith('shopee_')).join('; ') + ';')
+          </div>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-badge">1</div>
+            <div class="step-title">Buka Shopee di Chrome</div>
+            <div class="step-desc">Login ke akun Shopee Anda di browser komputer/laptop seperti biasa di <code>https://shopee.co.id</code>.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">2</div>
+            <div class="step-title">Tekan F12 (Console)</div>
+            <div class="step-desc">Tekan tombol <strong>F12</strong> pada keyboard untuk membuka Developer Tools, lalu klik tab <strong>Console</strong>.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">3</div>
+            <div class="step-title">Paste Skrip &amp; Enter</div>
+            <div class="step-desc">Tempel (*paste*) skrip di atas ke Console lalu tekan <strong>Enter</strong>. Cookie sesi resmi akan otomatis tersalin ke clipboard Anda!</div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">4</div>
+            <div class="step-title">Ikat ke Dashboard</div>
+            <div class="step-desc">Buka Dashboard > Tab <strong>Akun</strong> > Klik tombol <strong>🔐 Ikat Cookie</strong> pada akun terkait > Tempel dan Simpan.</div>
+          </div>
+        </div>
+
+        <div class="callout callout-success">
+          <div class="callout-icon">✅</div>
+          <div class="callout-content">
+            <div class="callout-title">Berapa Akun Ber-cookie yang Diperlukan?</div>
+            <div class="callout-desc">Untuk menjalankan order 1.000 view, Anda <strong>cukup memiliki 5 s/d 20 akun ber-cookie asli</strong>. Sisa 980+ viewer akan otomatis dijalankan oleh sistem dalam mode Guest Streaming melalui proxy perumahan Anda.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 4: MEMBUAT & MENJALANKAN KAMPANYE -->
+      <!-- ===================================================================== -->
+      <section id="bab-4" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">04</div>
+          <div>
+            <h2 class="section-title">Membuat &amp; Menjalankan Kampanye Siaran</h2>
+            <div class="section-subtitle">Panduan langkah demi langkah saat menerima pesanan penonton dari klien</div>
+          </div>
+        </div>
+
+        <p>Ketika klien Anda mengirimkan link live streaming mereka, ikuti langkah berikut untuk menyuntikkan penonton:</p>
+
+        <h3 class="sub-title"><span>📝</span> Panduan Form Kampanye Baru</h3>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-badge">1</div>
+            <div class="step-title">Masukkan Link Siaran Live</div>
+            <div class="step-desc">
+              Tempelkan link dari klien. Sistem mendukung semua link:<br>
+              • Link pendek HP: <code>https://id.shp.ee/nJiKeerC</code><br>
+              • Link share: <code>https://live.shopee.co.id/share?session=...</code><br>
+              • Sistem otomatis mengekstrak <strong>Room ID</strong>.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-badge">2</div>
+            <div class="step-title">Tentukan Target Penonton</div>
+            <div class="step-desc">Geser slider target penonton sesuai pesanan klien (contoh: <strong>100</strong>, <strong>500</strong>, atau <strong>1.000</strong> viewers).</div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-badge">3</div>
+            <div class="step-title">Pilih Mode Retensi (Durasi Nonton)</div>
+            <div class="step-desc">
+              Pilih gaya menonton bot:<br>
+              • <strong>Organic Curve</strong>: Penonton naik perlahan menyerupai tren penonton asli (Disarankan).<br>
+              • <strong>Infinite 24h</strong>: Jumlah penonton tetap stabil nonstop.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-badge">4</div>
+            <div class="step-title">Pilih Preset Durasi Siaran</div>
+            <div class="step-desc">
+              Klik salah satu tombol cepat:<br>
+              • <code>⚡ 72 Jam (3 Hari)</code><br>
+              • <code>⏱️ 24 Jam (1 Hari)</code><br>
+              • <code>♾️ Nonstop</code> (Hingga distop manual).
+            </div>
+          </div>
+        </div>
+
+        <h3 class="sub-title"><span>🚀</span> Menjalankan &amp; Memantau Siaran</h3>
+        <p>Setelah form terisi, klik tombol hijau besar <strong>🚀 Mulai Kampanye Siaran</strong>.</p>
+        <ul style="margin-left: 20px; color: var(--text-muted); line-height: 1.8;">
+          <li>Dalam <strong>10–30 detik</strong>, bot worker akan mulai melakukan koneksi soket streaming ke server CDN Shopee.</li>
+          <li>Indikator <strong>Active Viewers</strong> di Dashboard akan mulai merangkak naik mendekati angka target Anda.</li>
+          <li>Traffic monitor akan menunjukkan penggunaan bandwidth hemat sebesar <strong>~18 KB/s per bot</strong>.</li>
+        </ul>
+
+        <div class="callout callout-pro">
+          <div class="callout-icon">🛑</div>
+          <div class="callout-content">
+            <div class="callout-title">Cara Menghentikan Kampanye</div>
+            <div class="callout-desc">Jika sesi live klien sudah selesai atau klien meminta stop, cukup klik tombol merah <strong>⏹️ Hentikan Kampanye</strong>. Semua soket koneksi bot dan proxy akan dilepaskan secara bersih dalam 2 detik.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 5: INTERAKSI OTOMATIS (LIKE & CHAT) -->
+      <!-- ===================================================================== -->
+      <section id="bab-5" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">05</div>
+          <div>
+            <h2 class="section-title">Interaksi Otomatis: Tap Love &amp; Komentar Cerdas</h2>
+            <div class="section-subtitle">Menaikkan engagement siaran agar masuk ke rekomendasi teratas Shopee Live</div>
+          </div>
+        </div>
+
+        <p>Penonton yang banyak akan terlihat jauh lebih meyakinkan jika kolom chat aktif dan jumlah love terus bertambah. Anda bisa menjual fitur ini sebagai <strong>Paket Sultan / Paket Premium</strong> kepada klien.</p>
+
+        <h3 class="sub-title"><span>❤️</span> Fitur 1: Auto Tap-Like Burst (Hujan Love)</h3>
+        <p>Buka tab <strong>Interaksi Otomatis</strong> pada kampanye Anda:</p>
+        <ul style="margin-left: 20px; color: var(--text-muted); line-height: 1.8;">
+          <li>Centang opsi <strong>Aktifkan Auto Tap-Like</strong>.</li>
+          <li>Atur slider kecepatan like: Disarankan <strong>50 s/d 150 likes per menit</strong>.</li>
+          <li>Sistem secara acak memilih 1–3 bot tiap beberapa detik untuk mengirimkan love ke layar live streamer.</li>
+        </ul>
+
+        <h3 class="sub-title"><span>💬</span> Fitur 2: Auto Komentar Chat Cerdas</h3>
+        <p>Centang opsi <strong>Aktifkan Auto Komentar</strong>, lalu tentukan konfigurasinya:</p>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-badge">A</div>
+            <div class="step-title">Pilih Kategori Produk Jualan</div>
+            <div class="step-desc">
+              Pilih kategori yang sesuai dengan barang yang dijual klien:<br>
+              • <strong>Fashion</strong> ("Spill ukuran L kak", "Ada warna hitam?")<br>
+              • <strong>Kecantikan</strong> ("Bisa untuk kulit berjerawat?", "BPOM gak kak?")<br>
+              • <strong>Gadget</strong> ("Garansi resmi gak kak?", "Bisa COD?")<br>
+              • <strong>Kuliner</strong> ("Tahan berapa hari di suhu ruang?")
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">B</div>
+            <div class="step-title">Custom Comment Bank (Kustom)</div>
+            <div class="step-desc">
+              Jika klien meminta kata-kata khusus (misalnya: <em>"checkout etalase 3 ya", "dapat diskon 50rb"</em>), tempelkan daftar kalimat tersebut ke kotak <strong>Custom Comments</strong> (pisahkan dengan baris baru).
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">C</div>
+            <div class="step-title">Atur Jeda Waktu Komentar</div>
+            <div class="step-desc">
+              Atur interval jeda: Disarankan <strong>20 s/d 45 detik</strong> sekali chat agar terlihat seperti interaksi pembeli manusia asli dan tidak terdeteksi spam.
+            </div>
+          </div>
+        </div>
+
+        <h3 class="sub-title"><span>⚡</span> Fitur 3: Kirim Komentar Instan (Manual)</h3>
+        <p>Jika streamer di live sedang bertanya sesuatu, Anda bisa langsung mengetik jawaban di kotak <strong>Kirim Komentar Instan</strong> di Dashboard, lalu tekan Enter. Bot otentik akan langsung mem-posting komentar tersebut dalam 1 detik.</p>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 6: PENJADWALAN SIARAN OTOMATIS -->
+      <!-- ===================================================================== -->
+      <section id="bab-6" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">06</div>
+          <div>
+            <h2 class="section-title">Penjadwalan Siaran Otomatis (Stream Scheduler)</h2>
+            <div class="section-subtitle">Menjalankan bot secara otomatis di jam tertentu tanpa harus dijaga di depan layar</div>
+          </div>
+        </div>
+
+        <p>Banyak seller Shopee yang siaran di jam prime time (misal jam 19:00 – 22:00 malam atau jam 00:00 saat promo tanggal kembar). Anda tidak perlu begadang untuk menyalakan bot secara manual.</p>
+
+        <h3 class="sub-title"><span>📅</span> Cara Membuat Jadwal Otomatis:</h3>
+        <ol style="margin-left: 20px; color: var(--text-muted); line-height: 1.8;">
+          <li>Klik menu <strong>Jadwal Siaran (Scheduler)</strong> di Dashboard.</li>
+          <li>Klik tombol <strong>➕ Tambah Jadwal Baru</strong>.</li>
+          <li>Masukkan URL live klien dan tentukan target penonton (misal 500 viewers).</li>
+          <li>Tentukan <strong>Waktu Mulai</strong> (contoh: Pukul 19:00) dan <strong>Durasi</strong> (contoh: 180 menit / 3 jam).</li>
+          <li>Klik <strong>Simpan Jadwal</strong>.</li>
+        </ol>
+
+        <div class="callout callout-info">
+          <div class="callout-icon">🤖</div>
+          <div class="callout-content">
+            <div class="callout-title">Sistem Bekerja Secara Otomatis di Latar Belakang</div>
+            <div class="callout-desc">Tepat pada jam yang ditentukan, sistem akan otomatis bangun, memulai pendaftaran bot, mengalirkan video, dan menyalakan interaksi chat. Begitu waktu sewa 3 jam habis, sistem akan otomatis mematikan bot secara mandiri.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 7: MONITORING & PERLINDUNGAN OTOMATIS -->
+      <!-- ===================================================================== -->
+      <section id="bab-7" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">07</div>
+          <div>
+            <h2 class="section-title">Monitoring Kesehatan &amp; Perlindungan Otomatis</h2>
+            <div class="section-subtitle">Fitur cerdas yang menjaga sistem tidak membakar bandwidth atau down</div>
+          </div>
+        </div>
+
+        <p>Sistem ini dilengkapi dengan <strong>Autonomous Health Engine</strong> yang memonitor siaran setiap 30 detik tanpa henti:</p>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-badge">🛡️</div>
+            <div class="step-title">Auto-Stop Saat Siaran Berakhir</div>
+            <div class="step-desc">Jika seller tiba-tiba mematikan siaran live sebelum waktu habis, sistem mendeteksi sinyal <code>room_ended</code> dan langsung mematikan semua bot dalam 3 menit agar kuota proxy dan CPU server Anda tidak terbuang sia-sia.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">🔄</div>
+            <div class="step-title">Hot-Failover Rotasi Proxy</div>
+            <div class="step-desc">Jika sebuah IP proxy tiba-tiba mengalami gangguan atau ditolak oleh Shopee, sistem secara instan memindahkan bot tersebut ke proxy cadangan tanpa membuat angka view di siaran drop.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-badge">⚡</div>
+            <div class="step-title">CDN Stream Auto-Refresh</div>
+            <div class="step-desc">Token URL video CDN Shopee memiliki masa kedaluwarsa setelah beberapa jam. Bot kita otomatis meminta token baru ke server Tencent CDN sehingga bot bisa menonton nonstop hingga 72 jam tanpa terputus.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 8: RIWAYAT & LAPORAN KERJA KLIEN -->
+      <!-- ===================================================================== -->
+      <section id="bab-8" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">08</div>
+          <div>
+            <h2 class="section-title">Riwayat Siaran &amp; Laporan Bukti Kerja Klien</h2>
+            <div class="section-subtitle">Mengekspor bukti pencapaian target penonton untuk dikirim ke klien</div>
+          </div>
+        </div>
+
+        <p>Setelah siaran selesai, Anda tentu perlu memberikan bukti kerja (*report*) yang meyakinkan kepada klien Anda.</p>
+
+        <h3 class="sub-title"><span>📈</span> Cara Melihat &amp; Ekspor Laporan:</h3>
+        <ol style="margin-left: 20px; color: var(--text-muted); line-height: 1.8;">
+          <li>Klik menu <strong>Riwayat Siaran (History)</strong> di Dashboard.</li>
+          <li>Pilih kampanye yang baru saja selesai. Anda akan melihat kartu rangkuman lengkap:
+            <ul style="margin-left: 20px; margin-top: 6px;">
+              <li><strong>Peak Viewers</strong>: Jumlah puncak penonton tertinggi yang berhasil dicapai (contoh: <em>1.024 Viewers</em>).</li>
+              <li><strong>Total Views Akumulasi</strong>: Total jumlah views yang terekam sepanjang live.</li>
+              <li><strong>Total Durasi Tayang</strong>: Berapa jam siaran berlangsung.</li>
+              <li><strong>Total Likes &amp; Comments</strong>: Jumlah interaksi yang berhasil dikirimkan.</li>
+            </ul>
+          </li>
+          <li>Ambil tangkapan layar (*screenshot*) kartu metrik tersebut dan kirimkan ke klien via WhatsApp sebagai bukti bahwa order telah tuntas dikerjakan 100%.</li>
+        </ol>
+      </section>
+
+      <!-- ===================================================================== -->
+      <!-- BAB 9: FAQ & TIPS SUKSES BISNIS JASA VIEW -->
+      <!-- ===================================================================== -->
+      <section id="bab-9" class="guide-section">
+        <div class="section-header">
+          <div class="section-num-badge">09</div>
+          <div>
+            <h2 class="section-title">FAQ, Troubleshooting &amp; Tips Bisnis</h2>
+            <div class="section-subtitle">Solusi cepat saat kendala dan cara memaksimalkan keuntungan bulanan</div>
+          </div>
+        </div>
+
+        <h3 class="sub-title"><span>❓</span> Pertanyaan yang Sering Muncul (FAQ)</h3>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>Mengapa komentar chat tidak muncul di live stream?</span>
+            <span class="faq-chevron">▼</span>
+          </div>
+          <div class="faq-answer">
+            Shopee Live mewajibkan autentikasi akun untuk mengirim chat. Pastikan Anda sudah mengikat minimal 5–10 akun dengan <strong>Cookie Asli</strong> menggunakan skrip ekstraktor di Bab 3. Jika hanya menggunakan mode guest murni tanpa cookie, bot hanya akan menaikkan angka view counter (mata).
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>Apakah aman jika 1 proxy SOCKS5 dipakai untuk 2 atau 3 bot?</span>
+            <span class="faq-chevron">▼</span>
+          </div>
+          <div class="faq-answer">
+            <strong>Sangat aman!</strong> Di dunia nyata, 2–3 perangkat dalam 1 rumah/WiFi menonton siaran yang sama adalah pola yang 100% natural. Setiap bot dibekali <em>device fingerprint</em> berbeda sehingga tidak akan dianggap spam oleh Shopee.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>Bagaimana cara menjaga tagihan proxy tetap hemat saat order ramai?</span>
+            <span class="faq-chevron">▼</span>
+          </div>
+          <div class="faq-answer">
+            <strong>Jangan pernah membeli proxy dengan hitungan bayar per GB (Pay-as-you-go)</strong> untuk live streaming video 24 jam nonstop karena biaya akan membengkak. Belilah paket <strong>Static Residential / ISP Proxy Unlimited Bandwidth</strong> (seperti IPRoyal / Proxy-Cheap) atau rakit <strong>Modem USB 4G Dongle sendiri</strong> dengan kartu SIM paket kuota lokal.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>Apakah bot ini bisa dijalankan di VPS agar laptop bisa dimatikan?</span>
+            <span class="faq-chevron">▼</span>
+          </div>
+          <div class="faq-answer">
+            Bisa sekali! Aplikasi ini sudah dilengkapi file <code>Dockerfile</code> dan konfigurasi <code>ecosystem.config.js</code> (PM2) sehingga bisa langsung dideploy ke VPS Ubuntu/Linux agar bekerja 24 jam nonstop di cloud.
+          </div>
+        </div>
+
+        <h3 class="sub-title" style="margin-top: 28px;"><span>💰</span> Struktur Paket Jual yang Direkomendasikan untuk Klien</h3>
+        <p>Berdasarkan harga pasaran marketplace di Indonesia, berikut rekomendasi paket harga yang bisa Anda tawarkan:</p>
+
+        <div class="custom-table-wrapper">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Nama Paket Layanan</th>
+                <th>Target Viewers</th>
+                <th>Durasi Tayang</th>
+                <th>Fitur Termasuk</th>
+                <th>Harga Jual ke Klien</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Paket Starter (Flash Sale)</strong></td>
+                <td>100 – 200 Viewers</td>
+                <td>3 – 4 Jam (Prime Time)</td>
+                <td>View Counter Stabil</td>
+                <td><strong>Rp 150.000 – Rp 250.000</strong> / sesi</td>
+              </tr>
+              <tr>
+                <td><strong>Paket Bisnis (Seharian)</strong></td>
+                <td>500 Viewers</td>
+                <td>12 – 24 Jam Nonstop</td>
+                <td>View + Auto Like Burst</td>
+                <td><strong>Rp 450.000 – Rp 600.000</strong> / hari</td>
+              </tr>
+              <tr>
+                <td><strong>Paket Sultan (Komplit 1.000 View)</strong></td>
+                <td>1.000 Viewers</td>
+                <td>24 Jam Nonstop</td>
+                <td>View + Auto Like + Chat Kategori</td>
+                <td><strong>Rp 800.000 – Rp 1.000.000</strong> / hari</td>
+              </tr>
+              <tr>
+                <td><strong>Paket Langganan 1 Bulan Penuh</strong></td>
+                <td>1.000 Viewers</td>
+                <td>30 Hari Nonstop</td>
+                <td>Full Support 24 Jam</td>
+                <td><strong>Rp 24.000.000 – Rp 30.000.000</strong> / bln</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FLOATING TOAST -->
+  <div id="toast" class="toast-msg">✅ Teks berhasil disalin ke clipboard!</div>
+
+  <!-- SCRIPT UNTUK INTERAKTIVITAS PANDUAN -->
+  <script>
+    // Copy Snippet to Clipboard Function
+    function copySnippet(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✅ Tersalin!';
+        showToast('Teks berhasil disalin ke clipboard!');
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+        }, 2000);
+      }).catch(err => {
+        // Fallback copy
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.innerHTML = '✅ Tersalin!';
+        showToast('Teks berhasil disalin ke clipboard!');
+        setTimeout(() => { btn.innerHTML = '📋 Salin'; }, 2000);
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3000);
+    }
+
+    // FAQ Accordion Toggle
+    document.querySelectorAll('.faq-question').forEach(item => {
+      item.addEventListener('click', () => {
+        const parent = item.parentElement;
+        parent.classList.toggle('open');
+      });
+    });
+
+    // Quick Search Filter
+    const searchInput = document.getElementById('quick-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+        const sections = document.querySelectorAll('.guide-section');
+        sections.forEach(sec => {
+          const text = sec.textContent.toLowerCase();
+          if (!term || text.includes(term)) {
+            sec.style.display = 'block';
+          } else {
+            sec.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Active TOC Highlight on Scroll
+    window.addEventListener('scroll', () => {
+      const sections = document.querySelectorAll('.guide-section');
+      const navLinks = document.querySelectorAll('.toc-link');
+      let currentSectionId = '';
+
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 120;
+        if (window.pageYOffset >= sectionTop) {
+          currentSectionId = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSectionId) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

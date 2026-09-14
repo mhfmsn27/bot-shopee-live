@@ -30,7 +30,11 @@ const SUITES = [
   { name: 'Organic Sigmoid Curve Ramp-Up & Human Behavioral Micro-Actions', file: 'test_organic_curve_micro_actions.js' },
   { name: 'Disaster Recovery, Online Atomic Backup & Crash Auto-Resume State', file: 'test_disaster_recovery_backup.js' },
   { name: 'At-Rest AES-256-GCM Credential Encryption & Security Governance', file: 'test_credential_encryption.js' },
-  { name: 'Access Gatekeeper, Anti-Brute-Force & Production Security Subsystem', file: 'test_security_gatekeeper.js', noPreload: true }
+  { name: 'Access Gatekeeper, Anti-Brute-Force & Production Security Subsystem', file: 'test_security_gatekeeper.js', noPreload: true },
+  { name: 'Persistent Stream Consumer & Zero-Allocation Throttled Drainer', file: 'test_persistent_stream_consumer.js' },
+  { name: 'Live Stream Connectivity & Real-Time WAF Diagnostic Endpoint', file: 'test_connectivity_endpoint.js' },
+  { name: 'Virtual SMS Gateway Multi-Provider & Real Registration Pipeline', file: 'test_sms_gateway_live.js' },
+  { name: 'Smart Hybrid Allocation (Anchor Viewers + Guest Persistent Streamers)', file: 'test_hybrid_allocation.js' }
 ];
 
 console.log('================================================================');

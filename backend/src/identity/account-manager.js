@@ -792,6 +792,56 @@ function addRealRegisteredAccount(accountObj) {
   return accountObj;
 }
 
+/**
+ * Ikat cookie asli dari browser ke akun tertentu
+ * @param {string} accountId
+ * @param {string} rawCookieText
+ */
+function bindRealCookiesToAccount(accountId, rawCookieText) {
+  if (!accountId) return { success: false, error: 'ID Akun diperlukan' };
+  if (!rawCookieText || typeof rawCookieText !== 'string' || !rawCookieText.trim()) {
+    return { success: false, error: 'String Cookie tidak boleh kosong' };
+  }
+
+  const cookieStr = rawCookieText.trim();
+  if (cookieStr.length < 10 || (!cookieStr.includes('SPC_') && !cookieStr.includes('='))) {
+    return { success: false, error: 'Format Cookie tidak valid (harus mengandung token SPC_ / Shopee cookies)' };
+  }
+
+  const accounts = loadDatabase();
+  const target = accounts.find(a => a.id === accountId);
+  if (!target) {
+    return { success: false, error: `Akun dengan ID [${accountId}] tidak ditemukan` };
+  }
+
+  // Deteksi token penting dalam cookie
+  const importantKeys = ['SPC_F', 'SPC_CLIENTID', 'SPC_R_T_ID', 'SPC_R_T_IV', 'SPC_SEC_SI', 'SPC_EC', 'SPC_U', 'SPC_ST'];
+  const detectedTokens = importantKeys.filter(k => cookieStr.includes(k + '='));
+
+  // Ekstrak SPC_U jika ada dalam cookie untuk update username/userId jika belum spesifik
+  const matchUser = cookieStr.match(/SPC_U=(\d+)/);
+  if (matchUser && matchUser[1] && (!target.username || target.username.startsWith('shopee_user_'))) {
+    target.username = `shopee_user_${matchUser[1].slice(-6)}`;
+  }
+
+  target.cookies = cookieStr;
+  target.cookieStatus = 'alive';
+  target.status = 'ready';
+  target.verified = true;
+  target.tokens = detectedTokens;
+  target.hasAuthTokens = detectedTokens.includes('SPC_SEC_SI') || detectedTokens.includes('SPC_R_T_ID') || detectedTokens.includes('SPC_U');
+  target.lastValidatedAt = new Date().toISOString();
+  target.accountType = 'real_authenticated';
+  target.note = 'Cookie otentik browser berhasil diikat ke akun';
+
+  saveDatabase(accounts);
+  return {
+    success: true,
+    message: `Session cookie berhasil diikat ke akun @${target.username}. Akun kini berstatus Siap Pakai.`,
+    account: target
+  };
+}
+
 module.exports = {
   getAllAccounts,
   getAvailableAccounts,
@@ -811,5 +861,6 @@ module.exports = {
   parseCookiePreview,
   validateSessionCookie,
   validateAllCookies,
-  addRealRegisteredAccount
+  addRealRegisteredAccount,
+  bindRealCookiesToAccount
 };

@@ -37,6 +37,7 @@ class CampaignInstance extends EventEmitter {
       : (parseInt(options.campaignDurationMinutes, 10) || 0);
 
     this.rampUpRatePerMin = Math.max(5, parseInt(options.rampUpRatePerMin, 10) || 30);
+    this.hybridMode = options.hybridMode !== undefined ? Boolean(options.hybridMode) : (options.allowGuestStream !== undefined ? Boolean(options.allowGuestStream) : false);
 
     // Lifecycle
     this.status = 'IDLE'; // IDLE | RUNNING | STOPPING | FINISHED
@@ -45,6 +46,9 @@ class CampaignInstance extends EventEmitter {
     this.rampUpInterval = null;
     this.campaignTimer = null;
     this.microActionInterval = null;
+    this.healthCheckInterval = null;
+    this.degradedCycles = 0;
+    this.zeroWorkerDurationSec = 0;
 
     // Metrics
     this.accumulatedViews = 0;
@@ -87,23 +91,31 @@ class CampaignInstance extends EventEmitter {
     if (this.status === 'RUNNING') return this;
     if (!this.roomId) throw new Error(`Room ID atau URL Shopee Live tidak valid untuk [${this.name}].`);
 
-    // Validasi Batasan Akun: Tidak boleh melewati jumlah akun aktif terverifikasi yang sedang tersedia
+    // Validasi Batasan Akun: Mode Standar vs Mode Hybrid Cerdas
     const availableAccounts = getAvailableAccounts();
-    if (availableAccounts.length === 0) {
-      throw new Error(`Tidak dapat memulai siaran [${this.name}]: Seluruh akun aktif terverifikasi sedang digunakan di siaran live lain atau belum ada akun (0 akun tersedia). Silakan tambahkan akun baru di menu Akun atau tunggu sesi live lain selesai.`);
-    }
+    if (!this.hybridMode) {
+      if (availableAccounts.length === 0) {
+        throw new Error(`Tidak dapat memulai siaran [${this.name}]: Seluruh akun aktif terverifikasi sedang digunakan di siaran live lain atau belum ada akun (0 akun tersedia). Silakan tambahkan akun baru di menu Akun atau tunggu sesi live lain selesai.`);
+      }
 
-    // Jika target viewer melebihi akun yang tersedia, batasi maksimal sesuai akun yang tersedia
-    if (this.targetViewers > availableAccounts.length) {
-      const originalTarget = this.targetViewers;
-      this.targetViewers = availableAccounts.length;
-      this.emit('log', 'WARN', `Target penonton [${this.name}] (${originalTarget}) dibatasi otomatis menjadi ${this.targetViewers} viewers menyesuaikan ${availableAccounts.length} akun terverifikasi yang sedang tersedia.`);
+      // Jika target viewer melebihi akun yang tersedia, batasi maksimal sesuai akun yang tersedia
+      if (this.targetViewers > availableAccounts.length) {
+        const originalTarget = this.targetViewers;
+        this.targetViewers = availableAccounts.length;
+        this.emit('log', 'WARN', `Target penonton [${this.name}] (${originalTarget}) dibatasi otomatis menjadi ${this.targetViewers} viewers menyesuaikan ${availableAccounts.length} akun terverifikasi yang sedang tersedia.`);
+      }
+    } else {
+      const anchorCount = Math.min(this.targetViewers, availableAccounts.length);
+      const guestCount = Math.max(0, this.targetViewers - anchorCount);
+      this.emit('log', 'INFO', `Mode Hybrid Aktif: ${anchorCount} Anchor Viewers (Akun Ber-Cookie) + ${guestCount} Guest Persistent Streamers (Residential Proxy).`);
     }
 
     this.status = 'RUNNING';
     this.startTime = Date.now();
     this.accumulatedViews = 0;
     this.totalChurnRotations = 0;
+    this.degradedCycles = 0;
+    this.zeroWorkerDurationSec = 0;
     this.workers.clear();
 
     this.emit('log', 'INFO', `Memulai sesi [${this.name}] - Room ID: ${this.roomId} dengan Target ${this.targetViewers} Viewers.`);
@@ -113,6 +125,9 @@ class CampaignInstance extends EventEmitter {
 
     // Micro-Actions & Stealth Emulation Engine
     this.startMicroActionEngine();
+
+    // Health Monitor Aggregate Engine
+    this.startHealthMonitorEngine();
 
     // Interaction engines
     if (this.enableLike) this.startLikeEngine();
@@ -195,8 +210,8 @@ class CampaignInstance extends EventEmitter {
     // Klaim akun aktif: untuk 25 penonton pertama (Anchor Viewers), prioritaskan akun ber-cookie otentik
     const isAnchorBatch = this.workers.size < 25;
     const account = claimAccount(this.id, this.name, { preferAuthenticated: isAnchorBatch });
-    if (!account) {
-      // Tidak ada akun yang bebas saat ini, hentikan penambahan worker baru
+    if (!account && !this.hybridMode) {
+      // Tidak ada akun yang bebas saat ini pada mode standar, hentikan penambahan worker baru
       return;
     }
 
@@ -255,6 +270,13 @@ class CampaignInstance extends EventEmitter {
       this.totalChurnRotations++;
       if (this.status === 'RUNNING' && (this.retentionMode === 'dynamic_churn' || this.retentionMode === 'organic_curve')) {
         setTimeout(() => this.spawnWorker(), Math.floor(Math.random() * 2000) + 500);
+      }
+    });
+
+    worker.on('room_ended', (data) => {
+      if (this.status === 'RUNNING') {
+        this.emit('log', 'INFO', `🏁 Sesi siaran live [${this.name}] telah selesai/diakhiri oleh streamer Shopee.`);
+        this.stop('stream_ended_by_host');
       }
     });
 
@@ -329,6 +351,63 @@ class CampaignInstance extends EventEmitter {
     return count;
   }
 
+  /**
+   * Health Monitor Aggregate Engine
+   * Memonitor rasio worker aktif vs target setiap 30 detik untuk mendeteksi network failure masif,
+   * proxy drop, atau pemblokiran WAF. Memberikan peringatan dini dan auto-stop jika seluruh worker mati.
+   */
+  startHealthMonitorEngine() {
+    if (this.healthCheckInterval) clearInterval(this.healthCheckInterval);
+
+    this.healthCheckInterval = setInterval(() => {
+      if (this.status !== 'RUNNING') return;
+
+      const activeViewers = this.getActiveViewerCount();
+      const target = this.targetViewers || 1;
+      const activeRatio = activeViewers / target;
+
+      // 1. Deteksi kondisi degraded (< 30% worker aktif)
+      if (activeRatio < 0.30 && this.accumulatedViews > 0) {
+        this.degradedCycles++;
+        // 4 siklus berturut-turut (2 menit) dalam kondisi degraded
+        if (this.degradedCycles >= 4) {
+          const warnMsg = `⚠️ [${this.name}] Performa siaran degraded: Hanya ${activeViewers}/${target} (${Math.round(activeRatio * 100)}%) worker aktif selama >2 menit. Memicu auto-recovery penambahan worker.`;
+          this.emit('log', 'WARN', warnMsg);
+          this.emit('campaign_degraded', {
+            campaignId: this.id,
+            campaignName: this.name,
+            activeViewers,
+            targetViewers: target,
+            ratio: activeRatio,
+            timestamp: new Date().toISOString()
+          });
+
+          // Pemicu auto-recovery: jalankan ramp-up step untuk mengisi kekurangan worker
+          this.startRampUpEngine();
+        }
+      } else {
+        this.degradedCycles = 0;
+      }
+
+      // 2. Deteksi kondisi seluruh worker mati (0 worker aktif selama > 3 menit)
+      if (activeViewers === 0 && this.accumulatedViews > 0) {
+        this.zeroWorkerDurationSec += 30;
+        if (this.zeroWorkerDurationSec >= 180) {
+          this.emit('log', 'ERROR', `🛑 [${this.name}] Seluruh worker terputus (0 penonton aktif) selama >3 menit. Melakukan auto-stop proteksi kampanye.`);
+          this.emit('campaign_critical_failure', {
+            campaignId: this.id,
+            campaignName: this.name,
+            reason: 'all_workers_dead',
+            timestamp: new Date().toISOString()
+          });
+          this.stop('all_workers_dead');
+        }
+      } else {
+        this.zeroWorkerDurationSec = 0;
+      }
+    }, 30000);
+  }
+
   stop(reason = 'manual_stop') {
     if (this.status === 'IDLE' || this.status === 'FINISHED') return this.getMetrics();
 
@@ -346,6 +425,10 @@ class CampaignInstance extends EventEmitter {
     if (this.microActionInterval) {
       clearInterval(this.microActionInterval);
       this.microActionInterval = null;
+    }
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
     }
     if (this.likeInterval) {
       clearInterval(this.likeInterval);
@@ -415,6 +498,7 @@ class CampaignInstance extends EventEmitter {
       roomId: this.roomId,
       rawInputUrl: this.rawInputUrl,
       targetViewers: this.targetViewers,
+      hybridMode: this.hybridMode,
       activeViewers: this.getActiveViewerCount(),
       accumulatedViews: this.accumulatedViews,
       totalChurnRotations: this.totalChurnRotations,
@@ -424,6 +508,8 @@ class CampaignInstance extends EventEmitter {
       elapsedSec,
       remainingSec,
       bandwidthKb: Math.round(totalBytes / 1024),
+      healthStatus: this.zeroWorkerDurationSec >= 60 ? 'critical' : (this.degradedCycles >= 4 ? 'degraded' : 'healthy'),
+      activeRatio: Math.round((this.getActiveViewerCount() / (this.targetViewers || 1)) * 100),
       // Interaction Metrics
       totalLikes: this.totalLikes,
       totalComments: this.totalComments,
@@ -501,9 +587,13 @@ class CampaignInstance extends EventEmitter {
         try {
           const viewingWorkers = Array.from(this.workers.values()).filter(w => w.state === 'VIEWING');
           if (viewingWorkers.length > 0) {
+            // Prioritaskan akun ber-cookie otentik (Anchor Viewers) karena hanya akun resmi yang diizinkan chat oleh Shopee
+            const authCandidates = viewingWorkers.filter(w => w.account && w.account.cookies && w.account.status === 'ready');
+            const targetPool = authCandidates.length > 0 ? authCandidates : viewingWorkers;
+
             const now = Date.now();
-            let candidates = viewingWorkers.filter(w => (now - w.lastCommentTime) > 20000);
-            if (candidates.length === 0) candidates = viewingWorkers;
+            let candidates = targetPool.filter(w => (now - w.lastCommentTime) > 20000);
+            if (candidates.length === 0) candidates = targetPool;
 
             const selectedWorker = candidates[Math.floor(Math.random() * candidates.length)];
             const text = commentBank.generateNaturalComment(this.commentCategory, this.customComments, this.id);
@@ -547,7 +637,10 @@ class CampaignInstance extends EventEmitter {
       throw new Error(`Belum ada bot penonton aktif di siaran [${this.name}] untuk mengirim chat.`);
     }
 
-    const selectedWorker = viewingWorkers[Math.floor(Math.random() * viewingWorkers.length)];
+    // Prioritaskan akun ber-cookie otentik
+    const authWorkers = viewingWorkers.filter(w => w.account && w.account.cookies && w.account.status === 'ready');
+    const targetPool = authWorkers.length > 0 ? authWorkers : viewingWorkers;
+    const selectedWorker = targetPool[Math.floor(Math.random() * targetPool.length)];
     const text = (customText && customText.trim()) 
       ? customText.trim() 
       : commentBank.generateNaturalComment(this.commentCategory, this.customComments, this.id);

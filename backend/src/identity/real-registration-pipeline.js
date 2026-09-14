@@ -121,21 +121,27 @@ async function completeRegistration(params = {}) {
   const idObj = identity || {};
   const formattedPhone = String(phone).startsWith('+') ? String(phone) : `+${phone}`;
 
-  // Pembangkitan sesi Shopee resmi
-  const randomUserId = Math.floor(100000000 + Math.random() * 900000000).toString();
-  const session = generateShopeeSessionCookies(randomUserId, idObj.username);
+  // Penanganan session cookie asli
+  const rawCookieInput = params.cookies || params.cookieString || null;
+  const hasRealProvidedCookie = rawCookieInput && typeof rawCookieInput === 'string' 
+    && rawCookieInput.trim().length >= 10 && (rawCookieInput.includes('SPC_') || rawCookieInput.includes('='));
+
   const accountId = `acc-real-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
 
-  // Alokasikan proxy (diutamakan mobile atau residential) agar registrasi tidak terdeteksi dari IP datacenter
+  // Alokasikan proxy (diutamakan mobile atau residential) agar akun terikat pada IP Indonesia yang bersih
   const allocatedProxy = proxyManager.allocateProxyForAccount(accountId, 'mobile') 
     || proxyManager.allocateProxyForAccount(accountId, 'residential')
     || proxyManager.allocateProxyForAccount(accountId);
 
+  const fallbackUserId = Math.floor(100000000 + Math.random() * 900000000).toString();
+  const extractedUserMatch = hasRealProvidedCookie ? rawCookieInput.match(/SPC_U=(\d+)/) : null;
+  const finalUserId = extractedUserMatch ? extractedUserMatch[1] : fallbackUserId;
+
   const newAccount = {
     id: accountId,
-    accountType: 'real_registered',
+    accountType: hasRealProvidedCookie ? 'real_authenticated' : 'real_registered',
     email: idObj.email || `${idObj.username || 'user'}@cepatmail.org`,
-    username: idObj.username || `shopee_user_${randomUserId.slice(-6)}`,
+    username: idObj.username || `shopee_user_${finalUserId.slice(-6)}`,
     name: idObj.fullName || idObj.name || 'Pengguna Shopee',
     gender: idObj.gender || 'unknown',
     birthdate: idObj.birthdate || '1995-01-01',
@@ -144,9 +150,9 @@ async function completeRegistration(params = {}) {
     avatar: idObj.avatar || null,
     phoneNumber: formattedPhone,
     password: idObj.password || `Shopee${Math.floor(1000 + Math.random() * 9000)}!Pass`,
-    cookies: session.cookieString,
-    cookieStatus: 'alive',
-    lastValidatedAt: new Date().toISOString(),
+    cookies: hasRealProvidedCookie ? rawCookieInput.trim() : null,
+    cookieStatus: hasRealProvidedCookie ? 'alive' : 'pending_cookie_bind',
+    lastValidatedAt: hasRealProvidedCookie ? new Date().toISOString() : null,
     assignedProxy: allocatedProxy ? {
       id: allocatedProxy.id,
       ip: allocatedProxy.ip,
@@ -155,10 +161,13 @@ async function completeRegistration(params = {}) {
       type: allocatedProxy.type,
       city: allocatedProxy.city
     } : null,
-    status: 'ready',
-    verified: true,
+    status: hasRealProvidedCookie ? 'ready' : 'pending_cookie_import',
+    verified: Boolean(hasRealProvidedCookie),
     lastOtp: otp,
     totalLiveWatched: 0,
+    note: hasRealProvidedCookie 
+      ? 'Akun terotentikasi dengan session cookie asli'
+      : 'Pendaftaran nomor & OTP berhasil. Menunggu pengikatan session cookie asli dari browser',
     createdAt: new Date().toISOString()
   };
 

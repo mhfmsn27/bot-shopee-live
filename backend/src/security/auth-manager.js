@@ -42,7 +42,7 @@ class AuthManager {
           salt: salt,
           sessionTimeoutMinutes: 60,
           enable2faWhatsapp: false,
-          adminPhone: '081298765432',
+          adminPhone: '',
           updatedAt: new Date().toISOString()
         };
         sqliteManager.saveConfig('security', initialConfig);
@@ -268,11 +268,11 @@ class AuthManager {
       ip
     });
 
-    const adminPhone = config.adminPhone || '081298765432';
+    const adminPhone = config.adminPhone || '';
     const message = `🔐 *KODE VERIFIKASI KEAMANAN (2FA)*\n\nKode OTP Anda: *${otpCode}*\n\nKode ini berlaku selama 3 menit untuk membuka Shopee Live View Bot Pro dari IP: ${ip}.\nJangan berikan kode ini kepada siapapun!`;
 
     try {
-      if (waGateway.isReady && typeof waGateway.sendMessage === 'function') {
+      if (adminPhone && waGateway.isReady && typeof waGateway.sendMessage === 'function') {
         await waGateway.sendMessage(adminPhone, message);
       }
     } catch (e) {

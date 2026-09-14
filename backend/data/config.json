@@ -21,18 +21,14 @@
   },
   "interaction": {
     "enableLike": true,
-    "likeRatePerMin": 100,
+    "likeRatePerMin": 60,
     "likeBurstMin": 3,
     "likeBurstMax": 8,
     "enableComment": true,
-    "commentIntervalSec": 30,
+    "commentIntervalSec": 20,
     "defaultCategory": "general",
     "enableShare": true,
-    "shareIntervalSec": 60,
-    "enableCartClick": true,
-    "cartClickRatePerMin": 15,
-    "maxCommentsPerSession": 500,
-    "antiSpamJitterSec": 4
+    "shareIntervalSec": 60
   },
   "smsGateway": {
     "provider": "simulator",
@@ -44,7 +40,7 @@
   },
   "whatsapp": {
     "enabled": true,
-    "adminNumber": "081298765432",
+    "adminNumber": "",
     "notifyOnStart": true,
     "notifyOnMilestone": true,
     "notifyOnFinish": true,
@@ -63,7 +59,7 @@
     "salt": "315c777762e739de21ee69daf7087778",
     "sessionTimeoutMinutes": 60,
     "enable2faWhatsapp": false,
-    "adminPhone": "081298765432",
+    "adminPhone": "",
     "updatedAt": "2026-09-12T07:29:52.789Z"
   }
 }

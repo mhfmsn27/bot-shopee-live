@@ -132,6 +132,44 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Smart Hybrid Mode Toggle Listener
+  const hybridCheckbox = document.getElementById('campaign-hybrid-mode');
+  const targetSlider = document.getElementById('target-viewers-slider');
+  const targetWarningText = document.getElementById('target-limit-warning-text');
+  const targetWarningBox = document.getElementById('target-limit-warning');
+
+  function syncHybridModeUI() {
+    if (!hybridCheckbox || !targetSlider) return;
+    const isHybrid = hybridCheckbox.checked;
+    if (isHybrid) {
+      targetSlider.max = 1000;
+      if (targetWarningText) {
+        targetWarningText.innerHTML = '<strong>Mode Hybrid Aktif:</strong> Akun ber-cookie diprioritaskan sebagai Anchor Viewers (like & chat). Kuota selebihnya dialirkan sebagai Guest Persistent Streamers via Residential Rotating Proxy.';
+      }
+      if (targetWarningBox) {
+        targetWarningBox.style.color = '#34d399';
+      }
+    } else {
+      const maxAllowed = Math.max(1, currentAvailableAccounts);
+      targetSlider.max = maxAllowed;
+      if (parseInt(targetSlider.value, 10) > maxAllowed) {
+        targetSlider.value = maxAllowed;
+        const badge = document.getElementById('target-viewers-badge');
+        if (badge) badge.textContent = `${maxAllowed} Viewers`;
+      }
+      if (targetWarningText) {
+        targetWarningText.innerHTML = '<strong>Mode Standar:</strong> Pengiriman bot dibatasi maksimal sejumlah akun aktif terverifikasi yang tersedia.';
+      }
+      if (targetWarningBox) {
+        targetWarningBox.style.color = '#f59e0b';
+      }
+    }
+  }
+
+  if (hybridCheckbox) {
+    hybridCheckbox.addEventListener('change', syncHybridModeUI);
+  }
+
   // Mode Selector Change Handler
   const modeRadios = document.querySelectorAll('input[name="retentionMode"]');
   const dynamicSettings = document.getElementById('dynamic-churn-settings');
@@ -164,6 +202,22 @@ document.addEventListener('DOMContentLoaded', () => {
   checkWhatsAppStatus();
   loadInteractionTab();
   loadChats();
+
+  // Live Clock for Enterprise Brand Bar
+  function updateLiveClock() {
+    const clockEl = document.getElementById('system-live-clock');
+    if (clockEl) {
+      const now = new Date();
+      clockEl.textContent = now.toLocaleTimeString('id-ID') + ' WIB';
+    }
+  }
+  updateLiveClock();
+  setInterval(updateLiveClock, 1000);
+
+  // Periodic Telemetry & Node Health Refresh (every 20s)
+  setInterval(() => {
+    if (typeof loadStatus === 'function') loadStatus();
+  }, 20000);
 
   // Duration Preset Buttons
   const btnPreset72h = document.getElementById('btn-preset-72h');
@@ -210,24 +264,31 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = (document.getElementById('campaign-name-input')?.value || '').trim();
       const modeRadio = document.querySelector('input[name="retentionMode"]:checked');
       
-      // Validasi Batasan Akun: Jangan sampai bisa melewati jumlah akun aktif tersedia
-      if (currentAvailableAccounts <= 0) {
-        alert('⚠️ Seluruh akun aktif terverifikasi sedang digunakan menonton siaran live lain (0 akun tersedia). Silakan tambahkan akun baru di tab "Akun & Identitas" atau tunggu live lain selesai.');
-        return;
+      const isHybrid = document.getElementById('campaign-hybrid-mode')?.checked ?? true;
+      
+      // Validasi Batasan Akun: Mode Standar vs Mode Hybrid
+      if (!isHybrid) {
+        if (currentAvailableAccounts <= 0) {
+          alert('⚠️ Seluruh akun aktif terverifikasi sedang digunakan menonton siaran live lain (0 akun tersedia). Silakan aktifkan Mode Hybrid Cerdas atau tunggu live lain selesai.');
+          return;
+        }
+
+        let requestedViewers = parseInt(document.getElementById('target-viewers-slider').value, 10) || 1;
+        if (requestedViewers > currentAvailableAccounts) {
+          requestedViewers = currentAvailableAccounts;
+          document.getElementById('target-viewers-slider').value = requestedViewers;
+          document.getElementById('target-viewers-badge').textContent = requestedViewers + ' Viewers';
+          showNotification(`ℹ️ Target dibatasi maksimal ${requestedViewers} viewers menyesuaikan akun terverifikasi yang sedang tersedia.`);
+        }
       }
 
-      let requestedViewers = parseInt(document.getElementById('target-viewers-slider').value, 10) || 1;
-      if (requestedViewers > currentAvailableAccounts) {
-        requestedViewers = currentAvailableAccounts;
-        document.getElementById('target-viewers-slider').value = requestedViewers;
-        document.getElementById('target-viewers-badge').textContent = requestedViewers + ' Viewers';
-        showNotification(`ℹ️ Target dibatasi maksimal ${requestedViewers} viewers menyesuaikan akun terverifikasi yang sedang tersedia.`);
-      }
+      const requestedViewers = parseInt(document.getElementById('target-viewers-slider').value, 10) || 1;
 
       const payload = {
         name: name || undefined,
         urlOrRoomId,
         targetViewers: requestedViewers,
+        hybridMode: isHybrid,
         retentionMode: modeRadio ? modeRadio.value : 'dynamic_churn',
         minWatchMinutes: document.getElementById('min-watch-slider').value,
         maxWatchMinutes: document.getElementById('max-watch-slider').value,
@@ -270,6 +331,85 @@ document.addEventListener('DOMContentLoaded', () => {
       } finally {
         btnStart.disabled = false;
         btnStart.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> 🚀 Mulai / Tambah Siaran Live`;
+      }
+    });
+  }
+
+  // Live Stream Connectivity & CDN Tester
+  const btnTestConn = document.getElementById('btn-test-stream-connectivity');
+  const testConnStatus = document.getElementById('test-connectivity-status');
+  const connResultBox = document.getElementById('connectivity-result-box');
+
+  if (btnTestConn) {
+    btnTestConn.addEventListener('click', async () => {
+      const urlOrRoomId = (document.getElementById('shopee-url-input')?.value || '').trim();
+      if (!urlOrRoomId) {
+        alert('Harap masukkan URL atau Session ID Shopee Live terlebih dahulu.');
+        return;
+      }
+
+      try {
+        btnTestConn.disabled = true;
+        btnTestConn.innerHTML = `<span style="display:inline-block;animation:pulseAnim 1s infinite;">⏳</span> Menguji...`;
+        if (testConnStatus) {
+          testConnStatus.style.display = 'inline';
+          testConnStatus.textContent = 'Menghubungi Shopee Live gateway...';
+        }
+        if (connResultBox) connResultBox.style.display = 'none';
+
+        const res = await fetch('/api/campaigns/test-connectivity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urlOrRoomId })
+        });
+        const data = await res.json();
+
+        if (connResultBox) {
+          connResultBox.style.display = 'block';
+          if (data.success) {
+            const isOnline = data.online;
+            const rData = data.roomData || {};
+            const cdn = data.cdnProbe || {};
+            const bot = data.antiBotStatus || {};
+
+            connResultBox.innerHTML = `
+              <div style="font-weight:700;font-size:0.88rem;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                ${isOnline ? '<span style="color:#10b981;">🟢 Live Streaming Terdeteksi AKTIF (Online)</span>' : '<span style="color:#f59e0b;">🟡 Sesi Belum Mulai / Offline</span>'}
+                <span style="font-size:0.72rem;background:rgba(238,77,45,0.15);color:#ff8c6d;padding:2px 8px;border-radius:var(--radius-full);">ID: ${data.roomId}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;margin-bottom:8px;">
+                <div>📺 <strong>Judul:</strong> ${escapeHtml(rData.title || 'Tidak ada judul')}</div>
+                <div>👤 <strong>Host:</strong> ${escapeHtml(rData.nickname || rData.username || 'Host Shopee')}</div>
+                <div>👥 <strong>Penonton Terkini:</strong> ${(rData.viewerCount || 0).toLocaleString('id-ID')} viewers</div>
+                <div>⚡ <strong>Latensi Gateway:</strong> ${data.latencyMs} ms</div>
+              </div>
+              <div style="padding:6px 10px;border-radius:var(--radius-sm);background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.25);margin-bottom:6px;">
+                🎥 <strong>Video Stream CDN (FLV/HLS):</strong> ${cdn.success ? `<span style="color:#10b981;">Terhubung (${cdn.bytesSampled} B sampled, latensi ${cdn.latencyMs}ms)</span>` : (rData.playUrl ? '<span style="color:#38bdf8;">Siap distream via Persistent Drainer</span>' : '<span style="color:#94a3b8;">Tidak tersedia</span>')}
+              </div>
+              <div style="padding:6px 10px;border-radius:var(--radius-sm);background:${bot.isWafBlocked ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)'};border:1px solid ${bot.isWafBlocked ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'};">
+                🛡️ <strong>Status Anti-Bot:</strong> ${bot.isWafBlocked ? '<span style="color:#ef4444;font-weight:600;">WAF Challenge Terdeteksi</span>' : '<span style="color:#10b981;font-weight:600;">Lolos / Siap Stream</span>'}
+                <div style="font-size:0.73rem;color:var(--text-dim);margin-top:2px;">${escapeHtml(bot.recommendation || '')}</div>
+              </div>
+            `;
+          } else {
+            connResultBox.innerHTML = `
+              <div style="color:#ef4444;font-weight:600;">❌ Gagal Terhubung ke Shopee Live</div>
+              <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">${escapeHtml(data.error || 'Server Shopee tidak merespons')}</div>
+            `;
+          }
+        }
+      } catch (err) {
+        if (connResultBox) {
+          connResultBox.style.display = 'block';
+          connResultBox.innerHTML = `
+            <div style="color:#ef4444;font-weight:600;">❌ Terjadi Kesalahan Koneksi</div>
+            <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">${escapeHtml(err.message)}</div>
+          `;
+        }
+      } finally {
+        btnTestConn.disabled = false;
+        btnTestConn.innerHTML = `<span>🔍</span> Tes Koneksi Room & Stream CDN`;
+        if (testConnStatus) testConnStatus.style.display = 'none';
       }
     });
   }
@@ -850,6 +990,7 @@ function setupAccountHandlers() {
   let activeActivationId = null;
   let activePhone = null;
   let activeIdentity = null;
+  let lastRegisteredAccountId = null;
   let smsPollInterval = null;
   let countdownTimer = null;
   let countdownSeconds = 120;
@@ -860,6 +1001,12 @@ function setupAccountHandlers() {
     activeActivationId = null;
     activePhone = null;
     activeIdentity = null;
+    lastRegisteredAccountId = null;
+
+    const cookieInput = document.getElementById('sms-step3-cookie-input');
+    if (cookieInput) cookieInput.value = '';
+    const feedback = document.getElementById('sms-bind-cookie-feedback');
+    if (feedback) { feedback.style.display = 'none'; feedback.textContent = ''; }
 
     const s1 = document.getElementById('sms-step-1-container');
     const s2 = document.getElementById('sms-step-2-container');
@@ -876,6 +1023,8 @@ function setupAccountHandlers() {
     if (p3) p3.className = 'status-pill';
     const otpBox = document.getElementById('sms-otp-display-box');
     if (otpBox) otpBox.style.display = 'none';
+    const copyOtpBtn = document.getElementById('btn-copy-sms-otp');
+    if (copyOtpBtn) copyOtpBtn.style.display = 'none';
   }
 
   async function loadSmsGatewayStatus() {
@@ -1021,6 +1170,10 @@ function setupAccountHandlers() {
           otpBox.style.display = 'block';
           otpBox.textContent = data.otp;
         }
+        const copyOtpBtn = document.getElementById('btn-copy-sms-otp');
+        if (copyOtpBtn) {
+          copyOtpBtn.style.display = 'inline-block';
+        }
 
         // Complete registration
         setTimeout(async () => {
@@ -1037,15 +1190,19 @@ function setupAccountHandlers() {
             });
             const compData = await compRes.json();
             if (compData.success) {
+              lastRegisteredAccountId = compData.account.id;
               document.getElementById('sms-step-2-container').style.display = 'none';
               document.getElementById('sms-step-3-container').style.display = 'block';
               document.getElementById('sms-step-pill-2').className = 'status-pill';
               document.getElementById('sms-step-pill-3').className = 'status-pill status-healthy';
 
+              const hasCookie = compData.account.cookies && compData.account.status === 'ready';
               document.getElementById('sms-success-summary').innerHTML = `
                 Akun resmi <strong>@${escapeHtml(compData.account.username)}</strong> (${escapeHtml(compData.account.name)})<br>
                 Nomor: <strong>${escapeHtml(compData.account.phoneNumber)}</strong> • Email: <strong>${escapeHtml(compData.account.email)}</strong><br>
-                Status Sesi: <span style="color:#10b981;font-weight:700;">🔐 Terotentikasi (Cookie Aktif)</span>
+                Status: ${hasCookie 
+                  ? '<span style="color:#10b981;font-weight:700;">🔐 Terotentikasi (Cookie Aktif)</span>' 
+                  : '<span style="color:#fbbf24;font-weight:700;">🟡 Menunggu Pengikatan Cookie Browser</span>'}
               `;
               loadAccounts();
             }
@@ -1057,11 +1214,219 @@ function setupAccountHandlers() {
     } catch (e) {}
   }
 
+  // Handler: Ikat Cookie Asli pada Step 3 Pendaftaran SMS
+  const btnBindCookieStep3 = document.getElementById('btn-bind-cookie-step3');
+  if (btnBindCookieStep3) {
+    btnBindCookieStep3.addEventListener('click', async () => {
+      const cookieInput = document.getElementById('sms-step3-cookie-input');
+      const feedback = document.getElementById('sms-bind-cookie-feedback');
+      const cookieVal = cookieInput ? cookieInput.value.trim() : '';
+
+      if (!cookieVal) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = '#ef4444';
+          feedback.textContent = 'Silakan tempel cookie dari browser terlebih dahulu.';
+        }
+        return;
+      }
+
+      if (!lastRegisteredAccountId) {
+        alert('ID akun tidak ditemukan. Silakan gunakan tombol Bind Cookie di tabel akun.');
+        return;
+      }
+
+      btnBindCookieStep3.disabled = true;
+      btnBindCookieStep3.textContent = 'Mengikat Cookie...';
+      try {
+        const res = await fetch(`/api/accounts/${lastRegisteredAccountId}/bind-cookies`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cookies: cookieVal })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#10b981';
+            feedback.textContent = '✅ Cookie otentik berhasil diikat! Akun kini berstatus Siap Pakai.';
+          }
+          document.getElementById('sms-success-summary').innerHTML += `<br><span style="color:#10b981;font-weight:700;">✅ Cookie Berhasil Diikat</span>`;
+          loadAccounts();
+        } else {
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#ef4444';
+            feedback.textContent = `❌ ${data.error || 'Gagal mengikat cookie'}`;
+          }
+        }
+      } catch (err) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = '#ef4444';
+          feedback.textContent = `❌ Error: ${err.message}`;
+        }
+      } finally {
+        btnBindCookieStep3.disabled = false;
+        btnBindCookieStep3.textContent = '🔐 Ikat Cookie & Aktifkan Akun';
+      }
+    });
+  }
+
+  // Modal Quick Bind Cookie Handlers
+  const modalBindCookie = document.getElementById('modal-bind-cookie');
+  const btnCloseBindModal = document.getElementById('btn-close-bind-cookie-modal');
+  const btnCancelBind = document.getElementById('btn-cancel-bind-cookie');
+  const btnSubmitBind = document.getElementById('btn-submit-bind-cookie');
+
+  window.openBindCookieModal = function(accountId, accountName) {
+    const idInput = document.getElementById('modal-bind-account-id');
+    const descEl = document.getElementById('modal-bind-account-desc');
+    const cookieInput = document.getElementById('modal-bind-cookie-textarea');
+    const feedback = document.getElementById('modal-bind-cookie-feedback');
+
+    if (idInput) idInput.value = accountId;
+    if (descEl) descEl.textContent = `Mengikat kredensial sesi autentik ke akun: ${accountName || accountId}`;
+    if (cookieInput) cookieInput.value = '';
+    if (feedback) {
+      feedback.style.display = 'none';
+      feedback.textContent = '';
+    }
+    if (modalBindCookie) modalBindCookie.classList.add('active');
+  };
+
+  if (btnCloseBindModal && modalBindCookie) {
+    btnCloseBindModal.addEventListener('click', () => modalBindCookie.classList.remove('active'));
+  }
+  if (btnCancelBind && modalBindCookie) {
+    btnCancelBind.addEventListener('click', () => modalBindCookie.classList.remove('active'));
+  }
+  if (btnSubmitBind) {
+    btnSubmitBind.addEventListener('click', async () => {
+      const accountId = document.getElementById('modal-bind-account-id')?.value;
+      const cookieVal = document.getElementById('modal-bind-cookie-textarea')?.value?.trim();
+      const feedback = document.getElementById('modal-bind-cookie-feedback');
+
+      if (!accountId) return;
+      if (!cookieVal) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.background = 'rgba(239,68,68,0.15)';
+          feedback.style.color = '#f87171';
+          feedback.textContent = 'String cookie tidak boleh kosong.';
+        }
+        return;
+      }
+
+      btnSubmitBind.disabled = true;
+      btnSubmitBind.textContent = 'Menyimpan...';
+
+      try {
+        const res = await fetch(`/api/accounts/${encodeURIComponent(accountId)}/bind-cookies`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cookies: cookieVal })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(`Cookie berhasil diikat ke akun @${data.account?.username || accountId}.`);
+          modalBindCookie?.classList.remove('active');
+          loadAccounts();
+        } else {
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.background = 'rgba(239,68,68,0.15)';
+            feedback.style.color = '#f87171';
+            feedback.textContent = data.error || 'Gagal mengikat cookie.';
+          }
+        }
+      } catch (e) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.background = 'rgba(239,68,68,0.15)';
+          feedback.style.color = '#f87171';
+          feedback.textContent = e.message;
+        }
+      } finally {
+        btnSubmitBind.disabled = false;
+        btnSubmitBind.textContent = '💾 Simpan & Ikat Cookie';
+      }
+    });
+  }
+
   if (btnCheckOtp) {
     btnCheckOtp.addEventListener('click', async () => {
       await pollSmsOtp();
     });
   }
+
+  function copyToClipboardRobust(text, btnEl, successLabel = '✅ Tersalin!', originalHtml = '') {
+    if (!text) return;
+    const prevHtml = originalHtml || (btnEl ? btnEl.innerHTML : '');
+    const triggerSuccess = () => {
+      if (btnEl) {
+        btnEl.innerHTML = successLabel;
+        setTimeout(() => { btnEl.innerHTML = prevHtml; }, 2000);
+      }
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(triggerSuccess).catch(() => fallbackCopy());
+    } else {
+      fallbackCopy();
+    }
+
+    function fallbackCopy() {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) triggerSuccess();
+      } catch (err) {
+        triggerSuccess();
+      }
+    }
+  }
+
+  // Action: Salin Nomor Telepon yang dialokasikan
+  const btnCopySmsPhone = document.getElementById('btn-copy-sms-phone');
+  if (btnCopySmsPhone) {
+    btnCopySmsPhone.addEventListener('click', () => {
+      const phoneText = activePhone 
+        ? (String(activePhone).startsWith('+') ? String(activePhone) : `+${activePhone}`) 
+        : (document.getElementById('sms-allocated-phone')?.textContent?.trim() || '');
+      copyToClipboardRobust(phoneText, btnCopySmsPhone, '<span>✅</span> Tersalin!', '<span>📋</span> Salin Nomor HP');
+    });
+  }
+
+  // Action: Salin Kode OTP yang diterima
+  const btnCopySmsOtp = document.getElementById('btn-copy-sms-otp');
+  if (btnCopySmsOtp) {
+    btnCopySmsOtp.addEventListener('click', () => {
+      const otpVal = document.getElementById('sms-otp-display-box')?.textContent?.trim();
+      if (otpVal && otpVal !== '------') {
+        copyToClipboardRobust(otpVal, btnCopySmsOtp, '✅ OTP Tersalin!', '📋 Salin OTP');
+      }
+    });
+  }
+
+  // Action: Salin Skrip Ekstraktor Cookie 1-Klik untuk Console DevTools
+  document.querySelectorAll('.btn-copy-extractor').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const script = "copy(document.cookie.split('; ').filter(x=>x.startsWith('SPC_')||x.startsWith('shopee_')).join('; ') + ';')";
+      copyToClipboardRobust(script, btn, '✅ Skrip Tersalin!', '📋 Salin Skrip Ekstraktor');
+      if (typeof showNotification === 'function') {
+        showNotification('Skrip Ekstraktor tersalin! Buka tab Shopee > F12 Console > Paste > Enter, lalu tempel hasilnya di sini.');
+      }
+    });
+  });
 
   if (btnCancelSms) {
     btnCancelSms.addEventListener('click', async () => {
@@ -1308,6 +1673,8 @@ function renderAccountsRows(items, totalFiltered) {
     let statusBadge = '';
     if (acc.status === 'suspended') {
       statusBadge = `<span style="background:rgba(244,63,94,0.15);color:#fb7185;padding:3px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">🔴 Terblokir</span>`;
+    } else if (acc.status === 'pending_cookie_import') {
+      statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;padding:3px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;">🟡 Menunggu Cookie</span>`;
     } else if (acc.isBusy) {
       statusBadge = `<span style="background:rgba(59,130,246,0.15);color:#60a5fa;padding:3px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
         <span class="pulse-dot" style="background:#60a5fa;box-shadow:0 0 8px #60a5fa;width:6px;height:6px;"></span> Menonton [${escapeHtml(acc.busyInCampaign || 'Live')}]
@@ -1383,6 +1750,11 @@ function renderAccountsRows(items, totalFiltered) {
       </td>
       <td>
         <div style="display:flex;gap:4px;align-items:center;">
+          ${(!acc.cookies || acc.status === 'pending_cookie_import') ? `
+            <button class="btn btn-secondary" style="padding:5px 8px;font-size:0.72rem;color:#10b981;" onclick="openBindCookieModal('${acc.id}', '${escapeHtml(acc.name || acc.username)}')" title="Ikat cookie otentik dari browser">
+              📋 Bind Cookie
+            </button>
+          ` : ''}
           ${acc.cookies ? `
             <button class="btn btn-secondary" style="padding:5px 8px;font-size:0.72rem;color:#06b6d4;" onclick="validateSingleCookie('${acc.id}')" title="Uji validitas cookie sesi">
               ⚡ Uji
@@ -2671,13 +3043,18 @@ function updateDashboardMetrics(metrics) {
       }
     }
 
-    // Batasi nilai dan slider target viewers secara dinamis
+    // Batasi nilai dan slider target viewers secara dinamis jika mode non-hybrid
     if (slider) {
-      const maxAllowed = Math.max(1, currentAvailableAccounts);
-      slider.max = maxAllowed;
-      if (parseInt(slider.value, 10) > maxAllowed) {
-        slider.value = maxAllowed;
-        if (badge) badge.textContent = `${maxAllowed} Viewers`;
+      const isHybrid = document.getElementById('campaign-hybrid-mode')?.checked ?? true;
+      if (!isHybrid) {
+        const maxAllowed = Math.max(1, currentAvailableAccounts);
+        slider.max = maxAllowed;
+        if (parseInt(slider.value, 10) > maxAllowed) {
+          slider.value = maxAllowed;
+          if (badge) badge.textContent = `${maxAllowed} Viewers`;
+        }
+      } else {
+        slider.max = 1000;
       }
     }
 
@@ -3693,12 +4070,19 @@ function setupSecurityGatekeeper() {
   // Security Settings Modal Open / Close
   if (btnOpenSecurity && modalSecSettings) {
     btnOpenSecurity.addEventListener('click', () => {
-      modalSecSettings.style.display = 'flex';
+      modalSecSettings.classList.add('active');
     });
   }
   if (btnCloseSecSettings && modalSecSettings) {
     btnCloseSecSettings.addEventListener('click', () => {
-      modalSecSettings.style.display = 'none';
+      modalSecSettings.classList.remove('active');
+    });
+  }
+  if (modalSecSettings) {
+    modalSecSettings.addEventListener('click', (e) => {
+      if (e.target === modalSecSettings) {
+        modalSecSettings.classList.remove('active');
+      }
     });
   }
 
@@ -3734,7 +4118,7 @@ function setupSecurityGatekeeper() {
             changeAlert.style.display = 'block';
           }
           setTimeout(() => {
-            if (modalSecSettings) modalSecSettings.style.display = 'none';
+            if (modalSecSettings) modalSecSettings.classList.remove('active');
             showSecurityGate('Password telah diubah. Silakan login dengan password baru.');
           }, 1500);
         } else {

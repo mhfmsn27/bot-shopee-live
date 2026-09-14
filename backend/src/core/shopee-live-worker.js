@@ -8,6 +8,7 @@ const EventEmitter = require('events');
 const {
   buildSpoofedHeaders, generateDeviceFingerprint,
   fetchLiveRoomInfo, sendViewerPingHeartbeat, connectToLiveStream,
+  createPersistentStreamConsumer,
   enterLiveRoom, leaveLiveRoom,
   sendLikeAction, sendChatMessage, sendCartClickAction
 } = require('./protocol-client');
@@ -65,6 +66,7 @@ class ShopeeLiveWorker extends EventEmitter {
     // Play URL dari Shopee Live room info (FLV stream)
     this.playUrl = null;
     this.viewerCount = 0;
+    this.streamConsumer = null;
   }
 
   /**
@@ -135,6 +137,11 @@ class ShopeeLiveWorker extends EventEmitter {
         timestamp: new Date().toISOString()
       });
 
+      // 3. Start persistent video stream consumption (CDN viewer registration)
+      if (this.playUrl && typeof this.playUrl === 'string' && this.playUrl.startsWith('http')) {
+        this.initStreamConsumer(this.playUrl);
+      }
+
       // Jadwalkan heartbeat berkala
       this.scheduleNextHeartbeat();
 
@@ -157,6 +164,104 @@ class ShopeeLiveWorker extends EventEmitter {
   }
 
   /**
+   * Inisialisasi dan pasang listener pada PersistentStreamConsumer
+   * @param {string} playUrl
+   */
+  initStreamConsumer(playUrl) {
+    if (!playUrl || typeof playUrl !== 'string' || !playUrl.startsWith('http')) return;
+    try {
+      if (this.streamConsumer) {
+        this.bytesTransferred += (this.streamConsumer.bytesStreamed || 0);
+        try { this.streamConsumer.stop(); } catch (e) {}
+        this.streamConsumer = null;
+      }
+
+      this.streamConsumer = createPersistentStreamConsumer(playUrl, {
+        proxyAgent: this.proxyAgent,
+        roomId: this.roomId,
+        fingerprint: this.fingerprint,
+        throttleBytesPerSec: (this.options && this.options.throttleBytesPerSec !== undefined) 
+          ? this.options.throttleBytesPerSec 
+          : 18000
+      });
+
+      this.streamConsumer.on('progress', (p) => {
+        this.emit('stream_progress', { workerId: this.id, bytesStreamed: p.bytesStreamed });
+      });
+
+      // Handle stream exhaustion (reconnect habis / URL CDN token expired)
+      this.streamConsumer.on('exhausted', (data) => {
+        this.emit('stream_exhausted', { workerId: this.id, roomId: this.roomId, ...data });
+        if (this.state === 'VIEWING') {
+          // Re-fetch URL stream baru dan hubungkan kembali
+          this.refreshStreamConsumer('url_token_exhausted');
+        }
+      });
+
+      this.streamConsumer.on('ended', (data) => {
+        if (this.state === 'VIEWING' && !this.streamConsumer?.aborted) {
+          this.emit('stream_ended', { workerId: this.id, bytesStreamed: data.bytesStreamed });
+        }
+      });
+
+      this.streamConsumer.on('error', (err) => {
+        this.emit('stream_error', { workerId: this.id, error: err.message });
+      });
+
+      this.streamConsumer.start();
+    } catch (streamErr) {
+      // Continuous stream consumption is best effort
+    }
+  }
+
+  /**
+   * Refresh URL play stream dari API Shopee Live untuk kampanye berdurasi panjang (hingga 72 jam)
+   * Mengatasi issue token CDN Shopee yang kadaluwarsa setelah beberapa jam.
+   * @param {string} [reason='periodic_refresh']
+   */
+  async refreshStreamConsumer(reason = 'periodic_refresh') {
+    if (this.state !== 'VIEWING') return false;
+    if (this._isRefreshingStream) return false;
+    this._isRefreshingStream = true;
+
+    try {
+      const activeCookie = this.account ? (this.account.cookies || this.account.cookie || null) : null;
+      const probeResult = await fetchLiveRoomInfo(this.roomId, {
+        proxyAgent: this.proxyAgent,
+        cookie: activeCookie,
+        fingerprint: this.fingerprint,
+        timeout: this.networkTimeout + 2000
+      });
+
+      if (probeResult && probeResult.roomData) {
+        if (!probeResult.online) {
+          this.emit('room_ended', { workerId: this.id, roomId: this.roomId });
+          this.leave('room_ended');
+          return false;
+        }
+
+        const freshPlayUrl = probeResult.roomData.playUrl;
+        if (freshPlayUrl && typeof freshPlayUrl === 'string' && freshPlayUrl.startsWith('http')) {
+          this.playUrl = freshPlayUrl;
+          this.initStreamConsumer(freshPlayUrl);
+          this.emit('stream_refreshed', {
+            workerId: this.id,
+            roomId: this.roomId,
+            reason,
+            timestamp: new Date().toISOString()
+          });
+          return true;
+        }
+      }
+    } catch (e) {
+      this.emit('error', { workerId: this.id, error: `Gagal me-refresh stream play URL: ${e.message}` });
+    } finally {
+      this._isRefreshingStream = false;
+    }
+    return false;
+  }
+
+  /**
    * Mengirim heartbeat ping untuk memperbarui status penonton aktif di server Shopee
    * Menggunakan micro-batch timer coordination (250ms tick coalescing) untuk skalabilitas 10.000 worker
    */
@@ -175,6 +280,11 @@ class ShopeeLiveWorker extends EventEmitter {
         this.heartbeatCount++;
         const activeCookie = this.account ? (this.account.cookies || this.account.cookie || null) : null;
         
+        // Cek kontinuitas video stream consumer untuk kampanye panjang
+        if ((!this.streamConsumer || !this.streamConsumer.connected) && this.playUrl) {
+          this.refreshStreamConsumer('heartbeat_stream_check');
+        }
+
         // Transmisi heartbeat: refresh room info + consume stream chunks
         const pingRes = await sendViewerPingHeartbeat(this.roomId, {
           proxyAgent: this.proxyAgent,
@@ -191,9 +301,23 @@ class ShopeeLiveWorker extends EventEmitter {
             proxyManager.reportFailure(this.proxy.id, 'Shopee IP Rate Limit (90309999)');
           }
           this.emit('ip_throttled', { workerId: this.id, roomId: this.roomId });
-          // Anti-detection backoff: tunggu 25-35 detik sebelum coba lagi
-          this.heartbeatIntervalSec = Math.floor(Math.random() * 11) + 25;
+
+          // Hot-Failover: Ganti ke proxy residensial baru secara langsung
+          const newProxy = proxyManager.allocateProxyForWorker(this.id, 'residential') || proxyManager.getNextProxy();
+          if (newProxy && (!this.proxy || newProxy.id !== this.proxy.id)) {
+            this.failoverProxy(newProxy);
+          }
+
+          // Anti-detection backoff: tunggu 15-25 detik sebelum coba lagi dengan IP baru
+          this.heartbeatIntervalSec = Math.floor(Math.random() * 11) + 15;
           this.scheduleNextHeartbeat();
+          return;
+        }
+
+        // Deteksi siaran berakhir dari response server
+        if (pingRes && pingRes.isOnline === false) {
+          this.emit('room_ended', { workerId: this.id, roomId: this.roomId });
+          this.leave('room_ended');
           return;
         }
 
@@ -208,7 +332,8 @@ class ShopeeLiveWorker extends EventEmitter {
           workerId: this.id,
           count: this.heartbeatCount,
           activeSec: Math.floor((Date.now() - this.startTime) / 1000),
-          latencyMs: pingRes.latencyMs || 40
+          latencyMs: pingRes.latencyMs || 40,
+          isStreaming: !!(this.streamConsumer && this.streamConsumer.connected)
         });
 
         this.scheduleNextHeartbeat();
@@ -232,6 +357,11 @@ class ShopeeLiveWorker extends EventEmitter {
     this.state = 'LEAVING';
 
     this.clearTimers();
+    if (this.streamConsumer) {
+      this.bytesTransferred += (this.streamConsumer.bytesStreamed || 0);
+      try { this.streamConsumer.stop(); } catch (e) {}
+      this.streamConsumer = null;
+    }
     const totalWatchedSec = this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0;
 
     // Kirim sinyal "leave room" ke server Shopee agar viewer count di-decrement
@@ -475,6 +605,11 @@ class ShopeeLiveWorker extends EventEmitter {
   stop() {
     this.state = 'STOPPED';
     this.clearTimers();
+    if (this.streamConsumer) {
+      this.bytesTransferred += (this.streamConsumer.bytesStreamed || 0);
+      try { this.streamConsumer.stop(); } catch (e) {}
+      this.streamConsumer = null;
+    }
     proxyManager.releaseWorkerProxy(this.id);
   }
 
@@ -501,9 +636,11 @@ class ShopeeLiveWorker extends EventEmitter {
       isMuted: this.isMuted,
       streamResolution: this.streamResolution,
       profileClicksSent: this.profileClicksSent,
+      isStreaming: !!(this.streamConsumer && this.streamConsumer.connected),
+      streamBytes: this.streamConsumer ? this.streamConsumer.bytesStreamed : 0,
       account: this.account ? { username: this.account.username, name: this.account.name, avatar: this.account.avatar } : null,
       proxy: this.proxy ? { ip: this.proxy.ip, city: this.proxy.city, latency: this.proxy.latency } : null,
-      bytesTransferred: this.bytesTransferred
+      bytesTransferred: this.bytesTransferred + (this.streamConsumer ? this.streamConsumer.bytesStreamed : 0)
     };
   }
 }

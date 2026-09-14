@@ -81,6 +81,20 @@
 
   <div class="app-container">
     
+    <!-- Top Enterprise Brand Bar -->
+    <div class="top-brand-bar">
+      <div class="top-brand-left">
+        <span class="company-name">🏢 Interna Solusi Teknologi</span>
+        <span class="bar-sep">•</span>
+        <span class="system-desc">Shopee Live Automation Infrastructure</span>
+      </div>
+      <div class="top-brand-right">
+        <span class="system-status-indicator"><span class="dot-green"></span> Sistem Operasional Normal</span>
+        <span class="bar-sep">•</span>
+        <span class="system-time" id="system-live-clock">--:--:-- WIB</span>
+      </div>
+    </div>
+
     <!-- Top Header -->
     <header class="top-header">
       <div class="brand-wrapper">
@@ -99,68 +113,80 @@
       </div>
 
       <div class="header-status-group">
-        <div id="waf-status-badge" class="status-pill status-healthy" style="cursor:pointer;" title="Status Pengawas Anti-Bot & WAF Shopee Live (Klik untuk Uji Probe)">
-          <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;"></span> WAF HEALTHY
+        <div class="header-status-cluster">
+          <div id="waf-status-badge" class="status-pill status-healthy" style="cursor:pointer;" title="Status Pengawas Anti-Bot & WAF Shopee Live (Klik untuk Uji Probe)">
+            <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;"></span> WAF HEALTHY
+          </div>
+          <div id="campaign-status-badge" class="status-pill">
+            <span style="width:8px;height:8px;border-radius:50%;background:#94a3b8;display:inline-block;"></span> STANDBY
+          </div>
+          <div id="node-meta-badge" class="node-meta-badge">
+            Cloud Node ID • Memuat...
+          </div>
         </div>
-        <div id="campaign-status-badge" class="status-pill">
-          <span style="width:8px;height:8px;border-radius:50%;background:#94a3b8;display:inline-block;"></span> STANDBY
+
+        <div class="header-action-toolbar">
+          <button type="button" id="btn-open-scheduler" class="btn-header-action" title="Kelola Jadwal Siaran Otomatis">
+            <span class="btn-action-icon">⏰</span>
+            <span class="btn-action-label">Jadwal Siaran</span>
+          </button>
+          <button type="button" id="btn-open-history" class="btn-header-action" title="Lihat Riwayat & Ekspor Laporan CSV">
+            <span class="btn-action-icon">📊</span>
+            <span class="btn-action-label">Riwayat</span>
+          </button>
+          <button type="button" id="btn-open-security" class="btn-header-action" title="Pengaturan Keamanan & Master Password">
+            <span class="btn-action-icon">🔐</span>
+            <span class="btn-action-label">Keamanan</span>
+          </button>
+          <button type="button" id="btn-lock-screen" class="btn-header-action btn-header-action-danger" title="Kunci Layar (Lock Screen)">
+            <span class="btn-action-icon">🔒</span>
+            <span class="btn-action-label">Kunci</span>
+          </button>
+          <button type="button" id="btn-theme-toggle" class="theme-toggle-btn" title="Ganti Mode Tema (Light / Dark)">
+            <span class="theme-toggle-icon" id="theme-toggle-icon">🌙</span>
+            <span id="theme-toggle-text" class="btn-action-label">Dark</span>
+          </button>
         </div>
-        <div id="node-meta-badge" class="node-meta-badge">
-          Cloud Node ID • Memuat...
-        </div>
-        <!-- Header Actions: Scheduler & History -->
-        <button type="button" id="btn-open-scheduler" class="btn btn-secondary" style="padding:5px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:6px;" title="Kelola Jadwal Siaran Otomatis">
-          <span>⏰</span> Jadwal Siaran
-        </button>
-        <button type="button" id="btn-open-history" class="btn btn-secondary" style="padding:5px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:6px;" title="Lihat Riwayat & Ekspor Laporan CSV">
-          <span>📊</span> Riwayat & Laporan
-        </button>
-        <button type="button" id="btn-open-security" class="btn btn-secondary" style="padding:5px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:6px;" title="Pengaturan Keamanan & Master Password">
-          <span>🔐</span> Keamanan
-        </button>
-        <button type="button" id="btn-lock-screen" class="btn btn-secondary" style="padding:5px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:6px;color:#ef4444;" title="Kunci Layar (Lock Screen)">
-          <span>🔒</span> Kunci
-        </button>
-        <!-- Theme Toggle Switcher -->
-        <button type="button" id="btn-theme-toggle" class="theme-toggle-btn" title="Ganti Mode Tema (Light / Dark)">
-          <span class="theme-toggle-icon" id="theme-toggle-icon">🌙</span>
-          <span id="theme-toggle-text">Dark</span>
-        </button>
       </div>
     </header>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs">
-      <button class="nav-tab active" data-tab="tab-controller" id="nav-btn-controller">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        Live Controller
-      </button>
-      <button class="nav-tab" data-tab="tab-accounts" id="nav-btn-accounts">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        Akun & Identitas
-      </button>
-      <button class="nav-tab" data-tab="tab-proxy" id="nav-btn-proxy">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-        Proxy Pool Manager
-      </button>
-      <button class="nav-tab" data-tab="tab-whatsapp" id="nav-btn-whatsapp">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-        WhatsApp Gateway
-      </button>
-      <button class="nav-tab" data-tab="tab-interaction" id="nav-btn-interaction">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-        Interaksi & Chat
-      </button>
-    </nav>
+    <div class="nav-tabs-wrapper">
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="tab-controller" id="nav-btn-controller">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>Live Controller</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-accounts" id="nav-btn-accounts">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>Akun & Identitas</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-proxy" id="nav-btn-proxy">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span>Proxy Pool Manager</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-whatsapp" id="nav-btn-whatsapp">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+          <span>WhatsApp Gateway</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-interaction" id="nav-btn-interaction">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          <span>Interaksi & Chat</span>
+        </button>
+      </nav>
+    </div>
 
     <!-- Top High-Level Metrics (Always Visible) -->
     <section class="metrics-grid">
-      <div class="metric-card" style="--card-accent: #06b6d4;">
+      <div class="metric-card metric-card-hero" style="--card-accent: #06b6d4;">
         <div class="metric-header">
           <span class="metric-title">Concurrent Viewers</span>
           <div class="metric-icon">👥</div>
         </div>
-        <div class="metric-value" id="metric-active-viewers">0</div>
+        <div class="metric-hero-body">
+          <div class="metric-value" id="metric-active-viewers">0</div>
+          <span class="metric-live-chip"><span class="pulse-dot"></span> LIVE</span>
+        </div>
         <div class="metric-sub">Penonton online saat ini</div>
       </div>
 
@@ -306,6 +332,14 @@
                 value=""
                 required
               />
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <button type="button" id="btn-test-stream-connectivity" class="btn btn-secondary" style="padding:5px 12px;font-size:0.75rem;display:inline-flex;align-items:center;gap:6px;" title="Uji Keterjangkauan Room, Video Stream CDN & Status WAF Shopee">
+                  <span>🔍</span> Tes Koneksi Room & Stream CDN
+                </button>
+                <span id="test-connectivity-status" style="font-size:0.75rem;color:var(--text-dim);display:none;">Memeriksa server Shopee...</span>
+              </div>
+              <div id="connectivity-result-box" style="display:none;margin-top:10px;padding:12px 14px;border-radius:var(--radius-md);background:var(--bg-glass);border:1px solid var(--border-glass);font-size:0.78rem;line-height:1.5;">
+              </div>
             </div>
 
             <!-- Target Viewers Slider (Dibatasi kapasitas akun aktif tersedia) -->
@@ -331,10 +365,26 @@
                 step="1" 
                 value="50" 
               />
-              <div id="target-limit-warning" style="font-size:0.72rem;color:#f59e0b;margin-top:6px;display:flex;align-items:center;gap:5px;">
-                <span>🔒</span>
-                <span>Batas Maksimal: Pengiriman bot dibatasi tidak boleh melewati jumlah akun aktif yang siap/tersedia (tidak sedang menonton live lain).</span>
+              <div id="target-limit-warning" style="font-size:0.72rem;color:#34d399;margin-top:6px;display:flex;align-items:center;gap:5px;">
+                <span>⚡</span>
+                <span id="target-limit-warning-text"><strong>Mode Hybrid Aktif:</strong> Akun ber-cookie diprioritaskan sebagai Anchor Viewers (like & chat). Kuota selebihnya dialirkan sebagai Guest Persistent Streamers via Residential Rotating Proxy.</span>
               </div>
+            </div>
+
+            <!-- Smart Hybrid Mode Switch -->
+            <div class="form-group" style="margin-bottom:14px;padding:10px 14px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.22);border-radius:var(--radius-md);">
+              <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:0;" for="campaign-hybrid-mode">
+                <div>
+                  <div style="font-size:0.84rem;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+                    <span>⚡ Mode Hybrid Cerdas (Live View Booster)</span>
+                    <span style="font-size:0.7rem;padding:2px 8px;border-radius:var(--radius-full);background:rgba(16,185,129,0.2);color:#34d399;font-weight:600;">Direkomendasikan</span>
+                  </div>
+                  <div style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">
+                    Maksimalkan lonjakan penonton hingga ratusan viewers tanpa dibatasi jumlah akun.
+                  </div>
+                </div>
+                <input type="checkbox" id="campaign-hybrid-mode" class="form-checkbox" style="width:18px;height:18px;cursor:pointer;" checked />
+              </label>
             </div>
 
             <!-- Mode Selector Cards -->
@@ -1231,6 +1281,19 @@
       </div>
     </div>
 
+    <!-- Enterprise Application Footer -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <span class="footer-copy">&copy; 2026 <strong>Interna Solusi Teknologi</strong>. All rights reserved.</span>
+        <span class="footer-sep">•</span>
+        <span class="footer-tagline">Solusi Otomasi & Infrastruktur Digital Terpercaya</span>
+      </div>
+      <div class="footer-right">
+        <span class="footer-badge"><span class="dot-green"></span> Private Cloud Node Active</span>
+        <span class="footer-sep">•</span>
+        <span class="footer-ver">Shopee Live View Bot Pro Enterprise v1.0</span>
+      </div>
+    </footer>
   </div>
 
   <!-- ===================================================================== -->
@@ -1451,7 +1514,15 @@
           <div id="sms-allocated-phone" style="font-size:1.4rem;font-weight:800;color:#34d399;letter-spacing:0.05em;font-family:'JetBrains Mono',monospace;">
             +62 812-xxxx-xxxx
           </div>
-          <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">
+          <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:8px;">
+            <button type="button" id="btn-copy-sms-phone" class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;">
+              <span>📋</span> Salin Nomor HP
+            </button>
+            <a href="https://shopee.co.id/buyer/login/signup" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding:4px 10px;font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;color:#ee4d2d;text-decoration:none;">
+              <span>🌐</span> Buka Daftar Shopee ↗
+            </a>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-dim);margin-top:8px;">
             Target Akun: <strong id="sms-target-username" style="color:var(--text-main);">-</strong> • Sisa Waktu: <span id="sms-countdown-timer" style="color:#f59e0b;font-weight:700;">120 dtk</span>
           </div>
         </div>
@@ -1466,8 +1537,13 @@
               Polling otomatis setiap 2 detik ke server gateway.
             </div>
           </div>
-          <div id="sms-otp-display-box" style="display:none;padding:6px 14px;background:rgba(238,77,45,0.15);border:1px solid rgba(238,77,45,0.4);border-radius:var(--radius-sm);font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:800;color:#ff8c6d;">
-            ------
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <div id="sms-otp-display-box" style="display:none;padding:6px 14px;background:rgba(238,77,45,0.15);border:1px solid rgba(238,77,45,0.4);border-radius:var(--radius-sm);font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:800;color:#ff8c6d;">
+              ------
+            </div>
+            <button type="button" id="btn-copy-sms-otp" class="btn btn-secondary" style="display:none;padding:3px 8px;font-size:0.72rem;color:#ee4d2d;border-color:rgba(238,77,45,0.3);">
+              📋 Salin OTP
+            </button>
           </div>
         </div>
 
@@ -1481,18 +1557,89 @@
         </div>
       </div>
 
-      <!-- Step 3: Success Confirmation -->
-      <div id="sms-step-3-container" style="display:none;text-align:center;padding:10px 0;">
-        <div style="font-size:2.5rem;margin-bottom:10px;">🎉</div>
-        <h4 style="font-size:1.1rem;font-weight:700;color:#34d399;margin-bottom:6px;">Akun Shopee Berhasil Didaftarkan!</h4>
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;" id="sms-success-summary">
-          Akun resmi dengan nomor HP dan Session Cookies aktif telah tersimpan ke database bot.
+      <!-- Step 3: Success Confirmation & Real Cookie Binding -->
+      <div id="sms-step-3-container" style="display:none;padding:10px 0;">
+        <div style="text-align:center;margin-bottom:12px;">
+          <div style="font-size:2.5rem;margin-bottom:6px;">🎉</div>
+          <h4 style="font-size:1.1rem;font-weight:700;color:#34d399;margin-bottom:4px;">Pendaftaran Nomor Shopee Berhasil!</h4>
+          <div style="font-size:0.82rem;color:var(--text-muted);" id="sms-success-summary">
+            Akun resmi berhasil didaftarkan dengan nomor virtual seluler Indonesia.
+          </div>
         </div>
+
+        <!-- Real Cookie Binding Action Box -->
+        <div style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.3);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;text-align:left;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-weight:700;font-size:0.85rem;color:#22d3ee;display:flex;align-items:center;gap:6px;">
+              <span>🔐</span> Ikat Session Cookie Asli dari Browser (Disarankan untuk Viewer Otentik)
+            </div>
+            <button type="button" class="btn btn-secondary btn-copy-extractor" style="padding:3px 8px;font-size:0.72rem;color:#38bdf8;border-color:rgba(56,189,248,0.3);">
+              📋 Salin Skrip Ekstraktor 1-Klik
+            </button>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:10px;line-height:1.4;">
+            Buka Shopee di tab browser tempat Anda menerima OTP, buka Console (F12), lalu paste skrip ekstraktor atau salin cookie asli di sini:
+          </div>
+          <textarea id="sms-step3-cookie-input" class="form-textarea" rows="3" placeholder="Tempel Cookie Shopee asli di sini (SPC_EC=...; SPC_U=...; SPC_ST=...)"></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button type="button" id="btn-bind-cookie-step3" class="btn btn-emerald" style="flex:1;padding:8px 12px;font-size:0.8rem;">
+              🔐 Ikat Cookie &amp; Aktifkan Akun
+            </button>
+          </div>
+          <div id="sms-bind-cookie-feedback" style="display:none;margin-top:8px;font-size:0.78rem;font-weight:600;"></div>
+        </div>
+
         <button type="button" id="btn-finish-sms-register" class="btn btn-primary" style="width:100%;">
-          ✅ Selesai & Perbarui Tabel Akun
+          ✅ Selesai &amp; Perbarui Tabel Akun
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: BIND REAL COOKIES KE AKUN (QUICK BIND) -->
+  <!-- ===================================================================== -->
+  <div id="modal-bind-cookie" class="modal-overlay">
+    <div class="modal-content" style="max-width: 550px;">
+      <div class="panel-header" style="margin-bottom:14px;">
+        <div>
+          <h3 style="font-size:1.05rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <span style="color:#06b6d4;">🔐</span> Ikat Session Cookie Asli Shopee
+          </h3>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;" id="modal-bind-account-desc">
+            Mengikat kredensial sesi autentik ke akun yang dipilih.
+          </div>
+        </div>
+        <button id="btn-close-bind-cookie-modal" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;">✕</button>
+      </div>
+
+      <input type="hidden" id="modal-bind-account-id" value="" />
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:0.78rem;color:var(--text-dim);line-height:1.4;">
+          Minimal harus mengandung token <code>SPC_EC</code>, <code>SPC_U</code>, atau <code>SPC_ST</code>.
+        </div>
+        <button type="button" class="btn btn-secondary btn-copy-extractor" style="padding:3px 8px;font-size:0.72rem;color:#38bdf8;border-color:rgba(56,189,248,0.3);white-space:nowrap;">
+          📋 Salin Skrip Ekstraktor
+        </button>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label" for="modal-bind-cookie-textarea" style="font-size:0.8rem;">String Session Cookie:</label>
+        <textarea id="modal-bind-cookie-textarea" class="form-textarea" rows="4" placeholder="Contoh: SPC_U=123456789; SPC_EC=abc...; SPC_ST=xyz...; SPC_F=...;"></textarea>
+      </div>
+
+      <div id="modal-bind-cookie-feedback" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:var(--radius-sm);font-size:0.8rem;"></div>
+
+      <div class="btn-group">
+        <button type="button" id="btn-submit-bind-cookie" class="btn btn-emerald" style="flex:1;">
+          💾 Simpan &amp; Ikat Cookie
+        </button>
+        <button type="button" id="btn-cancel-bind-cookie" class="btn btn-secondary">
+          Batal
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1806,17 +1953,17 @@
   </div>
 
   <!-- Security Settings Modal -->
-  <div id="modal-security-settings" class="modal-backdrop" style="display:none;">
-    <div class="modal-card" style="max-width:540px;">
-      <div class="modal-header">
+  <div id="modal-security-settings" class="modal-overlay">
+    <div class="modal-content" style="max-width:540px;">
+      <div class="panel-header" style="margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:1.3rem;">🔐</span>
           <h3 style="font-size:1.15rem;font-weight:700;color:var(--text-main);margin:0;">Pengaturan Keamanan Akses</h3>
         </div>
-        <button type="button" class="btn-close-modal" id="btn-close-sec-settings" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;">✕</button>
+        <button type="button" id="btn-close-sec-settings" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;">✕</button>
       </div>
 
-      <div class="modal-body" style="padding:16px 0;">
+      <div class="modal-body" style="padding:10px 0 0 0;">
         <!-- Status Overview -->
         <div class="sec-setting-item">
           <div>
@@ -1824,9 +1971,9 @@
             <div class="sec-setting-desc" id="sec-status-text">Proteksi aktif (Wajib Password saat login)</div>
           </div>
           <div>
-            <label class="switch">
+            <label class="toggle-switch-label">
               <input type="checkbox" id="toggle-security-active" checked>
-              <span class="slider round"></span>
+              <span class="switch-slider"></span>
             </label>
           </div>
         </div>
@@ -1837,9 +1984,9 @@
             <div class="sec-setting-desc">Kirim kode OTP ke nomor WhatsApp Admin saat login baru</div>
           </div>
           <div>
-            <label class="switch">
+            <label class="toggle-switch-label">
               <input type="checkbox" id="toggle-2fa-whatsapp">
-              <span class="slider round"></span>
+              <span class="switch-slider"></span>
             </label>
           </div>
         </div>
@@ -1850,7 +1997,7 @@
             <div class="sec-setting-desc">Layar terkunci otomatis jika tidak ada aktivitas</div>
           </div>
           <div>
-            <select id="select-session-timeout" style="padding:6px 10px;font-size:0.8rem;background:rgba(15,23,42,0.8);border:1px solid var(--border-glass);border-radius:var(--radius-sm);color:var(--text-main);">
+            <select id="select-session-timeout" class="form-select" style="padding:6px 10px;font-size:0.8rem;width:auto;min-width:110px;">
               <option value="15">15 Menit</option>
               <option value="30">30 Menit</option>
               <option value="60" selected>60 Menit</option>
@@ -1866,15 +2013,15 @@
           <form id="form-change-password">
             <div style="margin-bottom:10px;">
               <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Password Lama</label>
-              <input type="password" id="input-old-password" class="form-control" style="width:100%;padding:8px 12px;font-size:0.85rem;background:rgba(15,23,42,0.8);border:1px solid var(--border-glass);border-radius:var(--radius-sm);color:var(--text-main);" required>
+              <input type="password" id="input-old-password" class="form-input" placeholder="Masukkan password lama..." style="padding:8px 12px;font-size:0.85rem;" required>
             </div>
             <div style="margin-bottom:10px;">
               <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Password Baru (Min 6 Karakter)</label>
-              <input type="password" id="input-new-password" class="form-control" style="width:100%;padding:8px 12px;font-size:0.85rem;background:rgba(15,23,42,0.8);border:1px solid var(--border-glass);border-radius:var(--radius-sm);color:var(--text-main);" required>
+              <input type="password" id="input-new-password" class="form-input" placeholder="Masukkan password baru..." style="padding:8px 12px;font-size:0.85rem;" required>
             </div>
             <div style="margin-bottom:14px;">
               <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Konfirmasi Password Baru</label>
-              <input type="password" id="input-confirm-password" class="form-control" style="width:100%;padding:8px 12px;font-size:0.85rem;background:rgba(15,23,42,0.8);border:1px solid var(--border-glass);border-radius:var(--radius-sm);color:var(--text-main);" required>
+              <input type="password" id="input-confirm-password" class="form-input" placeholder="Ulangi password baru..." style="padding:8px 12px;font-size:0.85rem;" required>
             </div>
             <button type="submit" class="btn btn-emerald" style="width:100%;padding:10px;font-weight:600;font-size:0.85rem;">
               Simpan Master Password Baru
