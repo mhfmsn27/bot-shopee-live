@@ -254,6 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const modeRadio = document.querySelector('input[name="retentionMode"]:checked');
       
       const isHybrid = document.getElementById('campaign-hybrid-mode')?.checked ?? true;
+      const engineRadio = document.querySelector('input[name="workerEngine"]:checked');
+      const workerEngine = engineRadio ? engineRadio.value : 'browser';
       
       // Ambil nilai target viewers dari input langsung atau slider (skala puluhan ribu bot view tanpa batasan)
       const rawInp = document.getElementById('target-viewers-input')?.value;
@@ -266,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         urlOrRoomId,
         targetViewers: requestedViewers,
         hybridMode: isHybrid,
+        workerEngine,
         retentionMode: modeRadio ? modeRadio.value : 'dynamic_churn',
         minWatchMinutes: document.getElementById('min-watch-slider').value,
         maxWatchMinutes: document.getElementById('max-watch-slider').value,
@@ -652,6 +655,9 @@ function renderMultiCampaignsList(campaigns) {
           ${cmp.clientName ? `<span class="client-tag-badge">🏢 ${escapeHtml(cmp.clientName)}</span>` : ''}
           <span style="font-size:0.72rem;background:rgba(238,77,45,0.15);color:#ff8c6d;padding:2px 8px;border-radius:var(--radius-full);">
             Room ID: ${cmp.roomId}
+          </span>
+          <span style="font-size:0.72rem;background:${cmp.workerEngine === 'browser' ? 'rgba(99,102,241,0.2)' : 'rgba(16,185,129,0.2)'};color:${cmp.workerEngine === 'browser' ? '#818cf8' : '#34d399'};padding:2px 8px;border-radius:var(--radius-full);font-weight:600;">
+            ${cmp.workerEngine === 'browser' ? '🌐 Browser Stealth' : '⚡ Protocol Engine'}
           </span>
         </div>
         <div style="font-size:0.78rem;color:var(--text-dim);margin-top:4px;">
@@ -4605,3 +4611,169 @@ window.openClientReportModal = async function(campaignId) {
     alert(`Gagal memuat data laporan: ${err.message}`);
   }
 };
+
+// =====================================================================
+// GOOGLE OAUTH SSO SHOPEE AUTOMATION MODAL HANDLER
+// =====================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  const modalGoogleSso = document.getElementById('modal-google-sso');
+  const btnOpenGoogleModal = document.getElementById('btn-open-google-sso-modal');
+  const btnCloseGoogleModal = document.getElementById('btn-close-google-sso-modal');
+
+  const tabBtnHarvester = document.getElementById('tab-btn-google-harvester');
+  const tabBtnBulk = document.getElementById('tab-btn-google-bulk');
+  const paneHarvester = document.getElementById('google-sso-pane-harvester');
+  const paneBulk = document.getElementById('google-sso-pane-bulk');
+
+  const btnStartHarvester = document.getElementById('btn-start-google-harvester');
+  const btnCloseHarvester = document.getElementById('btn-close-google-harvester');
+  const harvesterBox = document.getElementById('harvester-status-box');
+  const harvesterText = document.getElementById('harvester-status-text');
+
+  const btnStartBulk = document.getElementById('btn-start-google-bulk');
+  const bulkInput = document.getElementById('google-bulk-input');
+  const bulkProgressBox = document.getElementById('google-bulk-progress-box');
+  const bulkProgressLabel = document.getElementById('bulk-progress-label');
+  const bulkProgressCount = document.getElementById('bulk-progress-count');
+  const bulkProgressBar = document.getElementById('bulk-progress-bar');
+  const bulkLiveLogs = document.getElementById('bulk-live-logs');
+
+  let bulkPollTimer = null;
+
+  if (btnOpenGoogleModal) {
+    btnOpenGoogleModal.addEventListener('click', () => {
+      if (modalGoogleSso) modalGoogleSso.classList.add('active');
+    });
+  }
+
+  if (btnCloseGoogleModal) {
+    btnCloseGoogleModal.addEventListener('click', () => {
+      if (modalGoogleSso) modalGoogleSso.classList.remove('active');
+    });
+  }
+
+  // Tab switching
+  if (tabBtnHarvester && tabBtnBulk) {
+    tabBtnHarvester.addEventListener('click', () => {
+      tabBtnHarvester.className = 'btn btn-primary';
+      tabBtnBulk.className = 'btn btn-secondary';
+      if (paneHarvester) paneHarvester.style.display = 'block';
+      if (paneBulk) paneBulk.style.display = 'none';
+    });
+
+    tabBtnBulk.addEventListener('click', () => {
+      tabBtnBulk.className = 'btn btn-primary';
+      tabBtnHarvester.className = 'btn btn-secondary';
+      if (paneBulk) paneBulk.style.display = 'block';
+      if (paneHarvester) paneHarvester.style.display = 'none';
+    });
+  }
+
+  // 1-Click Harvester Action
+  if (btnStartHarvester) {
+    btnStartHarvester.addEventListener('click', async () => {
+      try {
+        btnStartHarvester.disabled = true;
+        btnStartHarvester.textContent = '⏳ Membuka Browser...';
+        const res = await fetch('/api/accounts/google-sso/interactive-start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (harvesterBox) harvesterBox.style.display = 'block';
+          if (harvesterText) harvesterText.textContent = '⏳ Jendela Chrome terbuka. Silakan klik Google & login di browser...';
+          if (btnCloseHarvester) btnCloseHarvester.style.display = 'inline-block';
+          showNotification('🌐 Jendela Google Login Harvester berhasil dibuka.');
+        } else {
+          alert(data.error || data.message);
+        }
+      } catch (err) {
+        alert('Gagal membuka harvester: ' + err.message);
+      } finally {
+        btnStartHarvester.disabled = false;
+        btnStartHarvester.textContent = '🌐 Buka Jendela Google Login';
+      }
+    });
+  }
+
+  if (btnCloseHarvester) {
+    btnCloseHarvester.addEventListener('click', async () => {
+      try {
+        await fetch('/api/accounts/google-sso/interactive-close', { method: 'POST' });
+        if (harvesterBox) harvesterBox.style.display = 'none';
+        if (btnCloseHarvester) btnCloseHarvester.style.display = 'none';
+        showNotification('Jendela Harvester ditutup.');
+      } catch (e) {}
+    });
+  }
+
+  // Bulk Batch Action
+  if (btnStartBulk) {
+    btnStartBulk.addEventListener('click', async () => {
+      const rawText = (bulkInput?.value || '').trim();
+      if (!rawText) {
+        alert('Harap masukkan daftar akun Google (format: email:password:recovery_email per baris).');
+        return;
+      }
+
+      try {
+        btnStartBulk.disabled = true;
+        btnStartBulk.textContent = 'Memulai Batch...';
+
+        const res = await fetch('/api/accounts/google-sso/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rawText })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(data.message || 'Batch antrian Google SSO berhasil dimulai.');
+          if (bulkProgressBox) bulkProgressBox.style.display = 'block';
+          startBulkStatusPolling();
+        } else {
+          alert(data.error || 'Gagal memulai batch.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btnStartBulk.disabled = false;
+        btnStartBulk.textContent = '🚀 Jalankan Otomasi Bulk Batch';
+      }
+    });
+  }
+
+  function startBulkStatusPolling() {
+    if (bulkPollTimer) clearInterval(bulkPollTimer);
+    bulkPollTimer = setInterval(async () => {
+      try {
+        const res = await fetch('/api/accounts/google-sso/status');
+        const data = await res.json();
+        if (data.success && data.status) {
+          const s = data.status;
+          if (bulkProgressCount) bulkProgressCount.textContent = `${s.processed} / ${s.total}`;
+          if (bulkProgressLabel) {
+            bulkProgressLabel.textContent = s.active
+              ? `Sedang memproses: ${s.currentAccount || 'Menyiapkan...'}`
+              : 'Semua antrian selesai diproses.';
+          }
+          if (bulkProgressBar) {
+            const pct = s.total > 0 ? Math.round((s.processed / s.total) * 100) : 0;
+            bulkProgressBar.style.width = `${pct}%`;
+          }
+          if (bulkLiveLogs && Array.isArray(s.logs)) {
+            bulkLiveLogs.innerHTML = s.logs.map(l => `<div>[${l.timestamp}] ${escapeHtml(l.message)}</div>`).join('');
+          }
+
+          if (!s.active && s.total > 0) {
+            clearInterval(bulkPollTimer);
+            bulkPollTimer = null;
+            loadAccounts();
+          }
+        }
+      } catch (e) {}
+    }, 2000);
+  }
+});
+

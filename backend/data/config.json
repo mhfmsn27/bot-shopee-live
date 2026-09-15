@@ -58,16 +58,6 @@
       "savedAt": "2026-09-14T13:30:33.812Z"
     }
   ],
-  "security": {
-    "enabled": true,
-    "passwordHash": "ab0e6c79e7393964a45716d9c7b6a7a45f51ea3770288d99130eacdf52d547a69719247e6f22dc8bdac4db0d7a522ba20679609bed1296bef2266480e9e14d48",
-    "salt": "3160ec92b9f3330e693111bf92f5ad46",
-    "sessionTimeoutMinutes": 120,
-    "enable2faWhatsapp": false,
-    "adminPhone": "",
-    "updatedAt": "2026-09-14T18:15:17.219Z",
-    "username": "admin"
-  },
   "whatsapp": {
     "enabled": true,
     "adminNumber": "081298765432",
@@ -82,5 +72,15 @@
       "campaignEnd": true,
       "wafAlert": true
     }
+  },
+  "security": {
+    "enabled": true,
+    "passwordHash": "ce33d0da6fdf8b54b868be26a72d788b24da262389b05c5e29f0d58cdd4957b7d72524f330411b3f50f186bceaa27686e7a1714d31ec1f120e8ade84d8ba7562",
+    "salt": "1db8baf37fbddf700e32f8539490c501",
+    "sessionTimeoutMinutes": 120,
+    "enable2faWhatsapp": false,
+    "adminPhone": "",
+    "updatedAt": "2026-09-15T06:27:07.268Z",
+    "username": "admin"
   }
 }

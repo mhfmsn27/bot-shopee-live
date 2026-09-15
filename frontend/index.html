@@ -511,6 +511,32 @@
               </div>
             </div>
 
+            <!-- Engine Selection: Dual-Engine Architecture -->
+            <div class="form-group" style="margin-bottom:14px;padding:12px 14px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-md);">
+              <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-weight:700;font-size:0.84rem;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+                  <span>🚀 Mesin Eksekusi Penonton (Worker Engine):</span>
+                </span>
+                <span style="font-size:0.7rem;padding:2px 8px;border-radius:var(--radius-full);background:rgba(99,102,241,0.2);color:#818cf8;font-weight:600;">Anti-WAF Ready</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;">
+                  <input type="radio" name="workerEngine" value="browser" id="engine-browser" checked />
+                  <div>
+                    <div style="font-size:0.8rem;font-weight:700;color:var(--text-main);">🌐 Chromium Headless Stealth</div>
+                    <div style="font-size:0.68rem;color:var(--text-dim);">Counter Shopee 100% Real, Bypass ALB WAF</div>
+                  </div>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);cursor:pointer;">
+                  <input type="radio" name="workerEngine" value="protocol" id="engine-protocol" />
+                  <div>
+                    <div style="font-size:0.8rem;font-weight:700;color:var(--text-main);">⚡ Protokol Ringan (Node.js)</div>
+                    <div style="font-size:0.68rem;color:var(--text-dim);">Ultra-Low RAM, Cocok Ribuan CDN Drain</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <!-- Smart Hybrid Mode Switch -->
             <div class="form-group" style="margin-bottom:14px;padding:10px 14px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.22);border-radius:var(--radius-md);">
               <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:0;" for="campaign-hybrid-mode">
@@ -889,6 +915,9 @@
             </button>
             <button id="btn-open-sms-modal" class="btn btn-secondary" style="padding:8px 14px;font-size:0.82rem;color:#10b981;border-color:rgba(16,185,129,0.35);" title="Registrasi akun Shopee baru via Virtual SMS Gateway (+62)">
               📱 Registrasi via SMS
+            </button>
+            <button id="btn-open-google-sso-modal" class="btn btn-primary" style="padding:8px 16px;font-size:0.82rem;background:linear-gradient(135deg, #4285F4 0%, #34A853 50%, #EA4335 100%);border:none;color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(66,133,244,0.35);" title="Otomasi Akun Shopee via Google OAuth SSO">
+              🌐 Otomasi Akun Google (SSO)
             </button>
             <button id="btn-export-accounts-csv" class="btn btn-secondary" style="padding:8px 14px;font-size:0.82rem;">
               📥 Ekspor CSV
@@ -1762,6 +1791,93 @@
         <button type="button" id="btn-finish-sms-register" class="btn btn-primary" style="width:100%;">
           ✅ Selesai &amp; Perbarui Tabel Akun
         </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: GOOGLE OAUTH SSO SHOPEE AUTOMATION -->
+  <!-- ===================================================================== -->
+  <div id="modal-google-sso" class="modal-overlay">
+    <div class="modal-content" style="max-width: 680px;">
+      <div class="panel-header" style="margin-bottom:14px;">
+        <div>
+          <h3 style="font-size:1.05rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#fff;color:#4285F4;font-size:0.85rem;font-weight:900;">G</span>
+            Otomasi Akun Shopee via Google OAuth SSO
+          </h3>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+            Pendaftaran & login 100% resmi tanpa SMS OTP virtual. Menghasilkan session cookie SPC_ST permanen.
+          </div>
+        </div>
+        <button id="btn-close-google-sso-modal" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;">✕</button>
+      </div>
+
+      <!-- Navigation Tabs inside Modal -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border-color);padding-bottom:8px;">
+        <button type="button" id="tab-btn-google-harvester" class="btn btn-primary" style="padding:6px 14px;font-size:0.82rem;">
+          ⚡ 1-Click Harvester (Paling Mudah)
+        </button>
+        <button type="button" id="tab-btn-google-bulk" class="btn btn-secondary" style="padding:6px 14px;font-size:0.82rem;">
+          📋 Bulk Otomatis (Batch Gmail)
+        </button>
+      </div>
+
+      <!-- TAB 1: 1-Click Harvester -->
+      <div id="google-sso-pane-harvester">
+        <div style="padding:14px;background:rgba(66,133,244,0.08);border:1px solid rgba(66,133,244,0.25);border-radius:var(--radius-md);margin-bottom:16px;">
+          <div style="font-weight:700;font-size:0.88rem;color:#60a5fa;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+            <span>💡</span> Cara Kerja 1-Click Harvester:
+          </div>
+          <ol style="font-size:0.78rem;color:var(--text-dim);margin:0;padding-left:18px;line-height:1.6;">
+            <li>Klik tombol <strong>"Buka Jendela Google Login"</strong> di bawah.</li>
+            <li>Jendela Chrome asli akan terbuka langsung ke halaman login Shopee.</li>
+            <li>Klik <strong>Google</strong> dan pilih akun Google Anda di jendela tersebut.</li>
+            <li>Begitu login berhasil, sistem kami <strong>secara otomatis menyedot cookie SPC_ST</strong> dalam 1 detik, menyimpannya ke database, dan menutup browser.</li>
+          </ol>
+        </div>
+
+        <div id="harvester-status-box" style="display:none;padding:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-sm);margin-bottom:16px;text-align:center;">
+          <div style="font-size:0.85rem;font-weight:700;color:#34d399;" id="harvester-status-text">
+            ⏳ Menunggu Anda memilih akun Google di peramban...
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;">
+          <button type="button" id="btn-start-google-harvester" class="btn btn-primary" style="flex:1;padding:12px;background:linear-gradient(135deg, #4285F4 0%, #34A853 100%);border:none;font-weight:700;cursor:pointer;">
+            🌐 Buka Jendela Google Login
+          </button>
+          <button type="button" id="btn-close-google-harvester" class="btn btn-secondary" style="display:none;padding:12px;color:#f43f5e;cursor:pointer;">
+            ✕ Tutup Jendela
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 2: Bulk Batch Gmail -->
+      <div id="google-sso-pane-bulk" style="display:none;">
+        <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:8px;">
+          Masukkan daftar akun Google (Gmail) Anda. Format per baris: <code>email:password:recovery_email</code> (atau <code>email:password</code>).
+        </div>
+        <textarea id="google-bulk-input" class="form-textarea" rows="6" placeholder="user1@gmail.com:Password123!&#10;user2@gmail.com:Password456!:recovery2@gmail.com&#10;user3@gmail.com:Password789!"></textarea>
+
+        <!-- Batch Progress Overview -->
+        <div id="google-bulk-progress-box" style="display:none;margin:12px 0;padding:12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-sm);">
+          <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:6px;">
+            <span id="bulk-progress-label">Memproses antrian akun...</span>
+            <span id="bulk-progress-count" style="font-weight:700;color:#38bdf8;">0 / 0</span>
+          </div>
+          <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:var(--radius-full);overflow:hidden;">
+            <div id="bulk-progress-bar" style="height:100%;width:0%;background:#38bdf8;transition:width 0.3s ease;"></div>
+          </div>
+          <div id="bulk-live-logs" style="max-height:120px;overflow-y:auto;font-family:monospace;font-size:0.72rem;margin-top:10px;color:var(--text-muted);background:rgba(0,0,0,0.2);padding:8px;border-radius:var(--radius-sm);"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button type="button" id="btn-start-google-bulk" class="btn btn-emerald" style="flex:1;padding:10px;cursor:pointer;">
+            🚀 Jalankan Otomasi Bulk Batch
+          </button>
+        </div>
       </div>
 
     </div>

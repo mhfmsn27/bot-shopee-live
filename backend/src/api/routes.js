@@ -15,6 +15,7 @@ const historyManager = require('../analytics/history-manager');
 const streamScheduler = require('../scheduler/stream-scheduler');
 const smsGateway = require('../identity/sms-gateway');
 const realRegistrationPipeline = require('../identity/real-registration-pipeline');
+const googleSsoPipeline = require('../identity/google-sso-pipeline');
 const sqliteManager = require('../db/sqlite-manager');
 const authManager = require('../security/auth-manager');
 const protocolClient = require('../core/protocol-client');
@@ -47,6 +48,16 @@ waGateway.on('qr', (data) => broadcastSse('wa_qr', data));
 waGateway.on('connected', (user) => broadcastSse('wa_connected', user));
 waGateway.on('disconnected', () => broadcastSse('wa_disconnected', {}));
 waGateway.on('message_sent', (msg) => broadcastSse('wa_message_sent', msg));
+googleSsoPipeline.on('harvester_success', (data) => {
+  retentionController.addLog('SUCCESS', `✅ Akun Google SSO Berhasil Ditangkap: @${data.account.username}`);
+  broadcastSse('accounts_updated', accountManager.getAllAccounts());
+});
+googleSsoPipeline.on('batch_log', (item) => {
+  retentionController.addLog(item.level, `[Google SSO] ${item.message}`);
+});
+googleSsoPipeline.on('batch_completed', () => {
+  broadcastSse('accounts_updated', accountManager.getAllAccounts());
+});
 
 /**
  * Endpoint SSE Real-time Feed
@@ -760,6 +771,57 @@ router.post('/accounts/register-pipeline/complete', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+/**
+ * OTOMASI AKUN SHOPEE VIA GOOGLE OAUTH SSO
+ */
+router.post('/accounts/google-sso/interactive-start', async (req, res) => {
+  try {
+    const result = await googleSsoPipeline.launchInteractiveHarvester(req.body);
+    retentionController.addLog('INFO', '🚀 Membuka jendela 1-Click Google Login Harvester.');
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/accounts/google-sso/interactive-close', async (req, res) => {
+  try {
+    const result = await googleSsoPipeline.closeInteractiveHarvester();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/accounts/google-sso/bulk', async (req, res) => {
+  try {
+    let accountsList = [];
+    if (typeof req.body.rawText === 'string') {
+      accountsList = googleSsoPipeline.parseBulkText(req.body.rawText);
+    } else if (Array.isArray(req.body.accounts)) {
+      accountsList = req.body.accounts;
+    }
+
+    if (accountsList.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Daftar akun Google kosong atau format salah (gunakan format email:password:recovery_email per baris).' 
+      });
+    }
+
+    const result = await googleSsoPipeline.startBulkBatch(accountsList, req.body.options || {});
+    retentionController.addLog('INFO', `🚀 Memulai antrian otomatisasi Google SSO untuk ${accountsList.length} akun.`);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/accounts/google-sso/status', (req, res) => {
+  const status = googleSsoPipeline.getBatchStatus();
+  res.json({ success: true, status });
 });
 
 /**

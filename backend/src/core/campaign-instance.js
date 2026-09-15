@@ -5,6 +5,7 @@
 
 const EventEmitter = require('events');
 const ShopeeLiveWorker = require('./shopee-live-worker');
+const BrowserLiveWorker = require('./browser-live-worker');
 const { parseLiveRoomId } = require('./protocol-client');
 const proxyManager = require('../proxy/proxy-manager');
 const { 
@@ -43,6 +44,7 @@ class CampaignInstance extends EventEmitter {
 
     this.rampUpRatePerMin = Math.max(5, parseInt(options.rampUpRatePerMin, 10) || 30);
     this.hybridMode = options.hybridMode !== undefined ? Boolean(options.hybridMode) : true;
+    this.workerEngine = options.workerEngine || 'protocol'; // 'protocol' | 'browser' | 'hybrid'
 
     // Lifecycle
     this.status = 'IDLE'; // IDLE | RUNNING | STOPPING | FINISHED
@@ -246,14 +248,17 @@ class CampaignInstance extends EventEmitter {
 
     // Anti-Detection: Interval heartbeat natural 25-35 detik (dengan random jitter)
     const naturalHeartbeatInterval = Math.floor(Math.random() * 11) + 25;
-    const worker = new ShopeeLiveWorker({
+    const workerOptions = {
       id: workerId,
       roomId: this.roomId,
       account,
       proxy,
       watchDurationMs,
       heartbeatIntervalSec: this.heartbeatIntervalSec || naturalHeartbeatInterval
-    });
+    };
+
+    const isBrowserEngine = this.workerEngine === 'browser' || (this.workerEngine === 'hybrid' && this.workers.size < 10);
+    const worker = isBrowserEngine ? new BrowserLiveWorker(workerOptions) : new ShopeeLiveWorker(workerOptions);
 
     this.workers.set(worker.id, worker);
     this.accumulatedViews++;
@@ -497,6 +502,7 @@ class CampaignInstance extends EventEmitter {
       rawInputUrl: this.rawInputUrl,
       targetViewers: this.targetViewers,
       hybridMode: this.hybridMode,
+      workerEngine: this.workerEngine,
       activeViewers: this.getActiveViewerCount(),
       accumulatedViews: this.accumulatedViews,
       totalChurnRotations: this.totalChurnRotations,
