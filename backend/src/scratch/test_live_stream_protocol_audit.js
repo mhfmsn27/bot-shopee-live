@@ -76,7 +76,10 @@ async function runProtocolAudit() {
   runTest('Header spoofing dengan cookie nyata mempertahankan token otentik', () => {
     const realCookie = 'SPC_U=81726354; SPC_EC=token_sec_123; SPC_ST=sess_token_456;';
     const headers = protocolClient.buildSpoofedHeaders({ roomId: '99887766', cookie: realCookie });
-    assert.strictEqual(headers['Cookie'], realCookie, 'Cookie header harus persis sama dengan cookie akun otentik');
+    assert.ok(headers['Cookie'].includes('SPC_U=81726354'), 'Harus memuat SPC_U otentik');
+    assert.ok(headers['Cookie'].includes('SPC_EC=token_sec_123'), 'Harus memuat SPC_EC otentik');
+    assert.ok(headers['Cookie'].includes('SPC_ST=sess_token_456'), 'Harus memuat SPC_ST otentik');
+    assert.ok(headers['Cookie'].includes('SPC_F='), 'Harus memuat SPC_F tersinkronkan');
   });
 
   // -------------------------------------------------------------------------
@@ -192,7 +195,8 @@ async function runProtocolAudit() {
       roomId: 'room_audit_102',
       account: { name: 'Worker Protocol Tester', username: 'auditor_protocol' },
       heartbeatIntervalSec: 0.6,
-      networkTimeout: 1500
+      networkTimeout: 1500,
+      autoStopOnStreamEnd: false
     });
 
     assert.ok(worker.proxy, 'Worker harus otomatis mendapatkan proxy via Deduplication Guard');

@@ -91,12 +91,20 @@ async function runTests() {
 
   assert(compReg.id.startsWith('acc-real-'), 'Account ID harus format acc-real-');
   assert.strictEqual(compReg.accountType, 'real_registered');
-  assert.strictEqual(compReg.verified, true);
-  assert(compReg.cookies.includes('SPC_U='), 'Cookies harus memuat token SPC_U');
-  assert(compReg.cookies.includes('SPC_EC='), 'Cookies harus memuat token SPC_EC');
-  assert(compReg.cookies.includes('SPC_ST='), 'Cookies harus memuat token SPC_ST');
-  console.log(`    ✅ Akun Resmi Shopee Berhasil Dibuat & Tervalidasi: @${compReg.username} (${compReg.phoneNumber})`);
-  console.log(`    Cookie Session Length: ${compReg.cookies.length} chars (SPC_EC, SPC_ST, SPC_U OK)`);
+  assert.strictEqual(compReg.cookieStatus, 'pending_cookie_bind');
+
+  // Simpan akun ke database lalu bind real cookies
+  const accountManager = require('../identity/account-manager');
+  accountManager.addRealRegisteredAccount(compReg);
+  const bindRes = accountManager.bindRealCookiesToAccount(compReg.id, 'SPC_U=12345678; SPC_EC=token_sec_123; SPC_ST=sess_token_456; SPC_F=device_fp_789;');
+  assert.strictEqual(bindRes.success, true);
+  assert.strictEqual(bindRes.account.cookieStatus, 'alive');
+  assert.strictEqual(bindRes.account.verified, true);
+  assert(bindRes.account.cookies.includes('SPC_U='), 'Cookies harus memuat token SPC_U');
+  assert(bindRes.account.cookies.includes('SPC_EC='), 'Cookies harus memuat token SPC_EC');
+  assert(bindRes.account.cookies.includes('SPC_ST='), 'Cookies harus memuat token SPC_ST');
+  console.log(`    Cookie Session Length: ${bindRes.account.cookies.length} chars (SPC_EC, SPC_ST, SPC_U OK)`);
+  accountManager.deleteAccount(compReg.id);
 
   console.log('\n================================================================');
   console.log('🎉 SEMUA PENGUJIAN SMS GATEWAY & REGISTRATION PIPELINE PASS 100%!');

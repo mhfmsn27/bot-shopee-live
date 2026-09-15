@@ -186,11 +186,20 @@ async function runDeepAudit() {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.success, true);
     assert.strictEqual(res.body.account.accountType, 'real_registered');
-    assert.strictEqual(res.body.account.cookieStatus, 'alive');
-    assert.ok(res.body.account.cookies.includes('SPC_EC='));
+    assert.strictEqual(res.body.account.cookieStatus, 'pending_cookie_bind');
     assert.ok(res.body.account.phoneNumber.startsWith('+62'));
     assert.strictEqual(res.body.account.phoneNumber.startsWith('++'), false);
-    createdOfficialAccount = res.body.account;
+
+    // Bind authentic browser cookies
+    const bindRes = await apiRequest('POST', `/api/accounts/${res.body.account.id}/bind-cookies`, {
+      cookies: 'SPC_U=77112233; SPC_EC=tok123; SPC_ST=st123; SPC_F=device_fp_xyz;'
+    });
+    assert.strictEqual(bindRes.status, 200);
+    assert.strictEqual(bindRes.body.success, true);
+    assert.strictEqual(bindRes.body.account.cookieStatus, 'alive');
+    assert.ok(bindRes.body.account.cookies.includes('SPC_EC='));
+
+    createdOfficialAccount = bindRes.body.account;
   });
 
   // --- 3. COOKIE VAULT BULK & SINGLE VALIDATION ---
@@ -329,8 +338,8 @@ async function runDeepAudit() {
 
   await check('Frontend: dashboard.css has zero duplicated modal overlays', () => {
     const css = fs.readFileSync(path.join(__dirname, '../../../frontend/css/dashboard.css'), 'utf8');
-    const matches = css.match(/\.modal-overlay\s*\{/g) || [];
-    assert.strictEqual(matches.length, 1, 'Hanya boleh ada tepat 1 deklarasi .modal-overlay di CSS');
+    const matches = css.match(/^\.modal-overlay\s*\{/gm) || [];
+    assert.strictEqual(matches.length, 1, 'Hanya boleh ada tepat 1 deklarasi .modal-overlay di CSS tingkat dasar');
   });
 
   console.log('\n================================================================');

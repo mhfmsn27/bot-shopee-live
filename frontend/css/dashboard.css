@@ -1027,7 +1027,7 @@ body {
 
 .custom-table {
   width: 100%;
-  min-width: 680px;
+  min-width: 620px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.84rem;
@@ -1386,7 +1386,7 @@ body {
   padding: 24px 26px;
   width: 100%;
   max-width: 580px;
-  max-height: 90vh;
+  max-height: 92vh;
   overflow-y: auto;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
   transform: scale(0.95) translateY(12px);
@@ -1442,6 +1442,15 @@ body {
 
   .metric-value {
     font-size: 1.8rem;
+  }
+/* 1b. Small Laptops & Compact Desktops (<= 1120px) */
+@media (max-width: 1120px) {
+  .app-container {
+    max-width: 100%;
+    padding: 14px 18px;
+  }
+  .dashboard-grid {
+    gap: 16px;
   }
 }
 
@@ -1958,6 +1967,15 @@ body {
     grid-template-columns: 1fr;
     gap: 8px;
   }
+}
+
+/* 8. Ultra-Small Smartphones & Foldable Displays (<= 360px) */
+@media (max-width: 360px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
 
   .metric-card-hero {
     grid-column: span 1;
@@ -2694,5 +2712,751 @@ body {
   }
 }
 
+/* ==========================================================================
+   ENTERPRISE BOT CAPACITY POOL & RESIDENTIAL BALANCER STYLES
+   ========================================================================== */
+.capacity-pool-card {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.3s ease;
+}
 
+.capacity-pool-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.capacity-pool-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.capacity-pool-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.capacity-pool-title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.capacity-tag-optimal {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  font-weight: 700;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.capacity-tag-warning {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  font-weight: 700;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.capacity-tag-critical {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(244, 63, 94, 0.15);
+  color: #f43f5e;
+  font-weight: 700;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.capacity-pool-desc {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.capacity-pool-metrics {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.capacity-metric-item {
+  text-align: right;
+}
+
+.capacity-metric-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.capacity-metric-val {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.capacity-metric-val.val-green {
+  color: #10b981;
+}
+
+.capacity-metric-sub {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.capacity-metric-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border-glass);
+}
+
+.capacity-track {
+  width: 100%;
+  height: 10px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.capacity-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease;
+}
+
+.capacity-pool-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.btn-sm-preset {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-sm-preset:hover,
+.btn-sm-preset.active {
+  background: rgba(6, 182, 212, 0.2) !important;
+  border-color: #06b6d4 !important;
+  color: #06b6d4 !important;
+}
+
+.btn-scale-preset {
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-scale-preset:hover {
+  background: rgba(6, 182, 212, 0.2) !important;
+  border-color: #06b6d4 !important;
+  color: #06b6d4 !important;
+}
+
+.client-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+}
+
+/* ==========================================================================
+   EXECUTIVE CLIENT PDF PERFORMANCE REPORT (PRINT & SCREEN STYLES)
+   ========================================================================== */
+.modal-report-sheet {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.report-printable-paper {
+  padding: 28px 32px;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.report-header-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.report-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.report-logo-box {
+  width: 46px;
+  height: 46px;
+  background: #0f172a;
+  color: #38bdf8;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: 0.5px;
+}
+
+.report-company-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+}
+
+.report-company-sub {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.report-company-contact {
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.report-badge-box {
+  text-align: right;
+}
+
+.report-doc-badge {
+  display: inline-block;
+  background: #e0f2fe;
+  color: #0284c7;
+  font-weight: 800;
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.8px;
+}
+
+.report-ref-no {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 4px;
+}
+
+.report-divider {
+  height: 2px;
+  background: linear-gradient(90deg, #0284c7, #0f172a);
+  margin: 16px 0 20px 0;
+}
+
+.report-main-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 14px;
+  letter-spacing: -0.3px;
+}
+
+.report-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+}
+
+.report-meta-item {
+  font-size: 0.78rem;
+}
+
+.report-meta-label {
+  color: #64748b;
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.report-meta-val {
+  color: #0f172a;
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.report-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.report-kpi-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+}
+
+.report-kpi-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0284c7;
+}
+
+.report-kpi-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-top: 4px;
+}
+
+.report-kpi-desc {
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.report-section-box {
+  background: #f1f5f9;
+  border-left: 4px solid #0284c7;
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.report-section-heading {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.report-paragraph {
+  font-size: 0.76rem;
+  color: #334155;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.report-footer-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed #cbd5e1;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.report-audit-note {
+  font-size: 0.68rem;
+  color: #64748b;
+  line-height: 1.5;
+  max-width: 340px;
+}
+
+.report-signature-block {
+  text-align: center;
+}
+
+.report-sign-date {
+  font-size: 0.72rem;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.report-sign-seal {
+  width: 68px;
+  height: 68px;
+  border: 2px dashed #0284c7;
+  border-radius: 50%;
+  margin: 0 auto 6px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seal-inner {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #0284c7;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.report-sign-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.report-sign-role {
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.report-bottom-copyright {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* @media print formatting */
+@media print {
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .app-container,
+  .app-header,
+  .top-brand-bar,
+  .app-footer,
+  .nav-tabs-container,
+  .tab-pane,
+  #floating-live-bar,
+  .no-print,
+  .sec-gate-overlay {
+    display: none !important;
+  }
+
+  .modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    display: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  #modal-client-report.active {
+    display: block !important;
+  }
+
+  .modal-report-sheet {
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .report-printable-paper {
+    box-shadow: none !important;
+    padding: 8mm 12mm !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+
+/* ==========================================================================
+   DIRECT SLIDER NUMBER INPUTS & TELEMETRY INFRASTRUCTURE STYLES
+   ========================================================================== */
+
+.slider-number-input {
+  width: 78px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-weight: 700;
+  text-align: center;
+  font-size: 0.86rem;
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+  transition: all 0.2s ease;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.slider-number-input:hover {
+  border-color: rgba(238, 77, 45, 0.4);
+}
+
+.slider-number-input:focus {
+  border-color: #ee4d2d;
+  box-shadow: 0 0 0 2px rgba(238, 77, 45, 0.25);
+  background: var(--input-bg);
+}
+
+.slider-control-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Telemetry Card Styles */
+.telemetry-monitor-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease;
+}
+
+.telemetry-monitor-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #06b6d4, #10b981, #ee4d2d, #8b5cf6);
+}
+
+.telemetry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.telemetry-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.telemetry-icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: #38bdf8;
+}
+
+.telemetry-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.telemetry-subtitle {
+  font-size: 0.73rem;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+.telemetry-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #34d399;
+}
+
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .telemetry-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.telemetry-cell {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 105px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.telemetry-cell:hover {
+  transform: translateY(-2px);
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
+.telemetry-cell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.telemetry-cell-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.telemetry-cell-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+}
+
+.telemetry-cell-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+  line-height: 1.2;
+}
+
+.telemetry-cell-val small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.telemetry-cell-sub {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.telemetry-progress-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.telemetry-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.fill-cyan {
+  background: linear-gradient(90deg, #06b6d4, #38bdf8);
+}
+
+.fill-emerald {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.fill-amber {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.fill-purple {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.fill-shopee {
+  background: linear-gradient(90deg, #ee4d2d, #ff8c6d);
+}
+
+[data-theme="light"] .telemetry-cell {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .slider-number-input {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
 

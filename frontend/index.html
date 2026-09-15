@@ -10,75 +10,6 @@
   <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
-  <!-- Fullscreen Security Gatekeeper Overlay -->
-  <div id="securityGateOverlay" class="security-gate-overlay">
-    <div class="security-gate-card">
-      <div class="security-shield-icon">
-        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <path d="M9 12l2 2 4-4"/>
-        </svg>
-      </div>
-      <h2 class="security-gate-title">Security Gatekeeper</h2>
-      <p class="security-gate-desc">Shopee Live View Bot Pro dilindungi enkripsi. Masukkan Master Password untuk mengakses control center.</p>
-      <div class="security-gate-badges">
-        <span class="sec-badge"><span class="dot-green"></span> TLS/AES-256</span>
-        <span class="sec-badge">Anti-Brute Force</span>
-        <span class="sec-badge">Private Node</span>
-      </div>
-
-      <!-- Alert Box for Error / Lockout -->
-      <div id="secGateAlert" class="sec-gate-alert" style="display:none;"></div>
-
-      <!-- Step 1: Master Password Form -->
-      <form id="secGateForm" class="sec-gate-form">
-        <div class="sec-input-group">
-          <label for="secMasterPassword">Master Key / Password</label>
-          <div class="sec-input-wrapper">
-            <input type="password" id="secMasterPassword" placeholder="Masukkan Master Password..." autocomplete="current-password" required>
-            <button type="button" id="btnToggleSecPassword" class="sec-eye-btn" title="Lihat Password">👁️</button>
-          </div>
-        </div>
-
-        <div class="sec-options-row">
-          <label class="sec-checkbox-label">
-            <input type="checkbox" id="secRememberMe">
-            <span>Ingat sesi di perangkat ini (7 Hari)</span>
-          </label>
-        </div>
-
-        <button type="submit" id="btnSecUnlock" class="btn-sec-unlock">
-          <span id="secUnlockText">Buka Kunci Akses (Unlock)</span>
-          <span id="secUnlockSpinner" class="spinner" style="display:none;"></span>
-        </button>
-      </form>
-
-      <!-- Step 2: 2FA WhatsApp OTP Form (Hidden by default) -->
-      <form id="secGateOtpForm" class="sec-gate-form" style="display:none;">
-        <div class="sec-input-group">
-          <label for="secOtpCode">Kode Verifikasi WhatsApp (OTP 6-Digit)</label>
-          <div class="sec-input-wrapper">
-            <input type="text" id="secOtpCode" placeholder="Contoh: 849201" maxlength="6" pattern="\d*" autocomplete="one-time-code">
-          </div>
-          <p class="sec-otp-hint">Kode telah dikirimkan ke nomor WhatsApp Admin. Berlaku 3 menit.</p>
-        </div>
-
-        <button type="submit" id="btnSecVerifyOtp" class="btn-sec-unlock">
-          <span>Verifikasi Kode OTP</span>
-        </button>
-
-        <button type="button" id="btnSecBackToPassword" class="sec-back-btn">
-          Kembali ke Password
-        </button>
-      </form>
-
-      <div class="security-gate-footer">
-        <span>🔒 Sesi terenkripsi SHA-256 HMAC</span> • 
-        <span id="secIpBadge">IP: Memeriksa...</span>
-      </div>
-    </div>
-  </div>
-
   <div class="app-container">
     
     <!-- Top Enterprise Brand Bar -->
@@ -134,13 +65,17 @@
             <span class="btn-action-icon">📊</span>
             <span class="btn-action-label">Riwayat</span>
           </button>
-          <button type="button" id="btn-open-security" class="btn-header-action" title="Pengaturan Keamanan & Master Password">
-            <span class="btn-action-icon">🔐</span>
-            <span class="btn-action-label">Keamanan</span>
+          <div class="status-pill" style="background:rgba(238,77,45,0.12);border:1px solid rgba(238,77,45,0.3);color:var(--text-main);font-weight:700;display:flex;align-items:center;gap:6px;" title="Akun Operator Aktif">
+            <span>👤</span>
+            <span id="header-operator-username">admin</span>
+          </div>
+          <button type="button" id="btn-open-security" class="btn-header-action" title="Pengaturan Akun Operator & Batas Sesi">
+            <span class="btn-action-icon">⚙️</span>
+            <span class="btn-action-label">Akun & Sesi</span>
           </button>
-          <button type="button" id="btn-lock-screen" class="btn-header-action btn-header-action-danger" title="Kunci Layar (Lock Screen)">
-            <span class="btn-action-icon">🔒</span>
-            <span class="btn-action-label">Kunci</span>
+          <button type="button" id="btn-logout" class="btn-header-action btn-header-action-danger" title="Keluar & Akhiri Sesi">
+            <span class="btn-action-icon">🚪</span>
+            <span class="btn-action-label">Keluar</span>
           </button>
           <button type="button" id="btn-theme-toggle" class="theme-toggle-btn" title="Ganti Mode Tema (Light / Dark)">
             <span class="theme-toggle-icon" id="theme-toggle-icon">🌙</span>
@@ -295,6 +230,161 @@
         </div>
       </div>
 
+      <!-- Enterprise Elastic Bot Capacity Pool & Residential Proxy Balancer -->
+      <div id="capacity-pool-card" class="capacity-pool-card">
+        <div class="capacity-pool-header">
+          <div class="capacity-pool-info">
+            <div class="capacity-pool-icon">
+              ⚡
+            </div>
+            <div>
+              <div class="capacity-pool-title">
+                <span>Global Elastic Capacity Pool (Enterprise Agency)</span>
+                <span id="capacity-status-tag" class="capacity-tag-optimal">ELASTIS & BEBAS LIMIT</span>
+              </div>
+              <div class="capacity-pool-desc">
+                Infrastruktur Multi-Proxy Tanpa Batas — Mendukung puluhan ribu bot viewers & rotasi multi-proxy residential
+              </div>
+            </div>
+          </div>
+          <div class="capacity-pool-metrics">
+            <div class="capacity-metric-item">
+              <div class="capacity-metric-label">Penonton Aktif Saat Ini</div>
+              <div class="capacity-metric-val">
+                <span id="capacity-used-count">0</span> <span class="capacity-metric-sub">Active Viewers</span>
+              </div>
+            </div>
+            <div class="capacity-metric-divider"></div>
+            <div class="capacity-metric-item">
+              <div class="capacity-metric-label">Proxy Siap Routing</div>
+              <div class="capacity-metric-val" style="color:#38bdf8;">
+                <span id="capacity-proxies-count">0</span> <span class="capacity-metric-sub">Proxy IP</span>
+              </div>
+            </div>
+            <div class="capacity-metric-divider"></div>
+            <div class="capacity-metric-item">
+              <div class="capacity-metric-label">Kapasitas Maksimal</div>
+              <div class="capacity-metric-val val-green">
+                <span id="capacity-remaining-count">Unlimited</span> <span class="capacity-metric-sub">Tanpa Batas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Track -->
+        <div class="capacity-track">
+          <div id="capacity-progress-bar" class="capacity-fill" style="width: 100%; background: linear-gradient(90deg, #10b981, #06b6d4, #6366f1);"></div>
+        </div>
+        <div class="capacity-pool-footer">
+          <span id="capacity-usage-pct">Mode Elastic Aktif: Bebas Skalabilitas Puluhan Ribu Bot</span>
+          <span>⚡ High-Throughput Distributed Routing Engine</span>
+        </div>
+      </div>
+
+      <!-- Enterprise Live Infrastructure & Proxy Traffic Telemetry Monitor -->
+      <div id="infrastructure-telemetry-card" class="telemetry-monitor-card">
+        <div class="telemetry-header">
+          <div class="telemetry-title-group">
+            <div class="telemetry-icon-box">📊</div>
+            <div>
+              <h3 class="telemetry-title">
+                Infrastruktur & Traffic Telemetry Monitor
+                <span class="telemetry-live-badge"><span class="pulse-dot" style="width:6px;height:6px;"></span> LIVE METRICS</span>
+              </h3>
+              <div class="telemetry-subtitle">
+                Monitoring kesehatan CPU, Heap RAM, latensi event loop, throughput bandwidth, dan performa pool proxy armada
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="telemetry-uptime-badge" style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">Uptime: 0m</span>
+            <button type="button" id="btn-refresh-telemetry" class="btn btn-secondary" style="padding:4px 10px;font-size:0.72rem;display:inline-flex;align-items:center;gap:5px;">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="telemetry-grid">
+          <!-- 1. CPU Usage -->
+          <div class="telemetry-cell">
+            <div class="telemetry-cell-header">
+              <span class="telemetry-cell-label">CPU Load</span>
+              <span id="telem-cpu-tag" class="telemetry-cell-tag">Normal</span>
+            </div>
+            <div class="telemetry-cell-val" id="telem-cpu-val">0%</div>
+            <div class="telemetry-progress-track">
+              <div id="telem-cpu-bar" class="telemetry-progress-fill fill-cyan" style="width:0%;"></div>
+            </div>
+            <div class="telemetry-cell-sub" id="telem-cpu-sub">0 Cores | Load: 0.00</div>
+          </div>
+
+          <!-- 2. RAM Memory Heap -->
+          <div class="telemetry-cell">
+            <div class="telemetry-cell-header">
+              <span class="telemetry-cell-label">RAM Heap / RSS</span>
+              <span id="telem-ram-tag" class="telemetry-cell-tag">Stable</span>
+            </div>
+            <div class="telemetry-cell-val" id="telem-ram-val">0 <small>MB</small></div>
+            <div class="telemetry-progress-track">
+              <div id="telem-ram-bar" class="telemetry-progress-fill fill-emerald" style="width:0%;"></div>
+            </div>
+            <div class="telemetry-cell-sub" id="telem-ram-sub">RSS: 0 MB | Sys: 0 GB</div>
+          </div>
+
+          <!-- 3. Event Loop Latency -->
+          <div class="telemetry-cell">
+            <div class="telemetry-cell-header">
+              <span class="telemetry-cell-label">Event Loop Delay</span>
+              <span id="telem-latency-tag" class="telemetry-cell-tag" style="color:#34d399;">Optimal</span>
+            </div>
+            <div class="telemetry-cell-val" id="telem-latency-val">0.0 <small>ms</small></div>
+            <div class="telemetry-progress-track">
+              <div id="telem-latency-bar" class="telemetry-progress-fill fill-emerald" style="width:10%;"></div>
+            </div>
+            <div class="telemetry-cell-sub" id="telem-latency-sub">Zero-Lag Async I/O</div>
+          </div>
+
+          <!-- 4. Active Bot Workers -->
+          <div class="telemetry-cell">
+            <div class="telemetry-cell-header">
+              <span class="telemetry-cell-label">Bot Workers Aktif</span>
+              <span id="telem-workers-tag" class="telemetry-cell-tag">Elastic</span>
+            </div>
+            <div class="telemetry-cell-val" id="telem-workers-val" style="color:#ff8c6d;">0</div>
+            <div class="telemetry-progress-track">
+              <div id="telem-workers-bar" class="telemetry-progress-fill fill-shopee" style="width:0%;"></div>
+            </div>
+            <div class="telemetry-cell-sub" id="telem-workers-sub">0 Sesi Live Simultan</div>
+          </div>
+
+          <!-- 5. Proxy Fleet Health -->
+          <div class="telemetry-cell">
+            <div class="telemetry-cell-header">
+              <span class="telemetry-cell-label">Proxy Fleet Health</span>
+              <span id="telem-proxy-tag" class="telemetry-cell-tag" style="color:#38bdf8;">100%</span>
+            </div>
+            <div class="telemetry-cell-val" id="telem-proxy-val" style="color:#38bdf8;">0 <small>IP Aktif</small></div>
+            <div class="telemetry-progress-track">
+              <div id="telem-proxy-bar" class="telemetry-progress-fill fill-cyan" style="width:100%;"></div>
+            </div>
+            <div class="telemetry-cell-sub" id="telem-proxy-sub">Latensi Rata-rata: 0 ms</div>
+          </div>
+
+          <!-- 6. Network Throughput & Bandwidth -->
+          <div class="telemetry-cell">
+            <div class="telemetry-cell-header">
+              <span class="telemetry-cell-label">Traffic Throughput</span>
+              <span id="telem-traffic-tag" class="telemetry-cell-tag">Streaming</span>
+            </div>
+            <div class="telemetry-cell-val" id="telem-traffic-val" style="color:#a78bfa;">0.0 <small>KB/s</small></div>
+            <div class="telemetry-progress-track">
+              <div id="telem-traffic-bar" class="telemetry-progress-fill fill-purple" style="width:0%;"></div>
+            </div>
+            <div class="telemetry-cell-sub" id="telem-traffic-sub">Total Transfer: 0.0 MB</div>
+          </div>
+        </div>
+      </div>
+
       <div class="dashboard-grid">
         
         <!-- Left Panel: Campaign Configuration Form -->
@@ -307,17 +397,46 @@
           </div>
 
           <form id="campaign-form" onsubmit="event.preventDefault();">
-            <div class="form-group">
-              <label class="form-label" for="campaign-name-input">
-                Nama Akun / Label Toko (Multi-Akun)
-              </label>
-              <input 
-                type="text" 
-                id="campaign-name-input" 
-                class="form-input" 
-                placeholder="Contoh: Toko Fashion Official (Boleh dikosongkan)"
-                value=""
-              />
+            <!-- Client Store Presets -->
+            <div class="form-group" style="margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <label class="form-label" style="margin-bottom:0;" for="client-preset-select">
+                  🏢 Preset Klien & Toko Langganan
+                </label>
+                <button type="button" id="btn-save-current-preset" class="btn btn-secondary" style="padding:3px 10px;font-size:0.72rem;display:inline-flex;align-items:center;gap:4px;" title="Simpan pengaturan saat ini sebagai preset toko baru">
+                  💾 Simpan Preset
+                </button>
+              </div>
+              <select id="client-preset-select" class="form-select" style="width:100%;">
+                <option value="">-- Pilih Toko Langganan / Input Manual Baru --</option>
+              </select>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" for="client-name-input">
+                  Nama Klien / Brand <span>*</span>
+                </label>
+                <input 
+                  type="text" 
+                  id="client-name-input" 
+                  class="form-input" 
+                  placeholder="Contoh: Erigo Official Store"
+                  value=""
+                />
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" for="campaign-name-input">
+                  Label Sesi Siaran
+                </label>
+                <input 
+                  type="text" 
+                  id="campaign-name-input" 
+                  class="form-input" 
+                  placeholder="Contoh: Flash Sale 9.9 Malam"
+                  value=""
+                />
+              </div>
             </div>
 
             <div class="form-group">
@@ -342,10 +461,10 @@
               </div>
             </div>
 
-            <!-- Target Viewers Slider (Dibatasi kapasitas akun aktif tersedia) -->
+            <!-- Target Viewers Slider & Direct Input (Skala Puluhan Ribu Bot Viewers Tanpa Batas) -->
             <div class="slider-container">
               <div class="slider-header">
-                <label class="form-label" style="margin-bottom:0;" for="target-viewers-slider">
+                <label class="form-label" style="margin-bottom:0;" for="target-viewers-input">
                   Target Concurrent Viewers:
                 </label>
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -353,6 +472,16 @@
                     <span style="width:7px;height:7px;border-radius:50%;background:#34d399;"></span>
                     <span id="accounts-available-text">Akun Siap: Memuat...</span>
                   </span>
+                  <input 
+                    type="number" 
+                    id="target-viewers-input" 
+                    min="1" 
+                    max="1000000" 
+                    step="1" 
+                    value="50"
+                    style="width:90px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-glass);background:var(--bg-card);color:var(--text-main);font-weight:800;text-align:center;font-size:0.95rem;" 
+                    title="Ketik jumlah viewers bebas tanpa batasan"
+                  />
                   <span class="slider-val-badge" id="target-viewers-badge">50 Viewers</span>
                 </div>
               </div>
@@ -361,13 +490,24 @@
                 id="target-viewers-slider" 
                 class="range-input" 
                 min="1" 
-                max="1000" 
-                step="1" 
+                max="50000" 
+                step="25" 
                 value="50" 
               />
+              <!-- Quick Preset Buttons (Skala Fleksibel & Puluhan Ribu) -->
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;" id="viewer-quick-presets">
+                <button type="button" class="btn btn-secondary btn-sm-preset" data-val="100">100</button>
+                <button type="button" class="btn btn-secondary btn-sm-preset" data-val="500">500</button>
+                <button type="button" class="btn btn-secondary btn-sm-preset" data-val="1000">1.000</button>
+                <button type="button" class="btn btn-secondary btn-sm-preset" data-val="3000">3.000</button>
+                <button type="button" class="btn btn-secondary btn-sm-preset" data-val="5000">5.000</button>
+                <button type="button" class="btn btn-secondary btn-sm-preset" data-val="10000">10.000</button>
+                <button type="button" class="btn btn-secondary btn-sm-preset" data-val="25000">25.000</button>
+                <button type="button" class="btn btn-secondary btn-sm-preset" data-val="50000">50.000</button>
+              </div>
               <div id="target-limit-warning" style="font-size:0.72rem;color:#34d399;margin-top:6px;display:flex;align-items:center;gap:5px;">
                 <span>⚡</span>
-                <span id="target-limit-warning-text"><strong>Mode Hybrid Aktif:</strong> Akun ber-cookie diprioritaskan sebagai Anchor Viewers (like & chat). Kuota selebihnya dialirkan sebagai Guest Persistent Streamers via Residential Rotating Proxy.</span>
+                <span id="target-limit-warning-text"><strong>Skala Enterprise Tanpa Batas:</strong> Bebas menentukan hingga puluhan ribu bot viewers. Didukung multi-proxy residential rotasi otomatis.</span>
               </div>
             </div>
 
@@ -432,9 +572,12 @@
                   <label class="form-label" style="margin-bottom:0;" for="min-watch-slider">
                     Min Waktu Menonton per Bot:
                   </label>
-                  <span class="slider-val-badge" id="min-watch-badge">5 Menit</span>
+                  <div class="slider-control-cluster">
+                    <input type="number" id="min-watch-input" class="slider-number-input" min="1" max="1440" step="1" value="5" title="Ketik waktu tonton minimal (menit)" />
+                    <span class="slider-val-badge" id="min-watch-badge">5 Menit</span>
+                  </div>
                 </div>
-                <input type="range" id="min-watch-slider" class="range-input" min="1" max="30" step="1" value="5" />
+                <input type="range" id="min-watch-slider" class="range-input" min="1" max="120" step="1" value="5" />
               </div>
 
               <div class="slider-container">
@@ -442,9 +585,12 @@
                   <label class="form-label" style="margin-bottom:0;" for="max-watch-slider">
                     Max Waktu Menonton per Bot:
                   </label>
-                  <span class="slider-val-badge" id="max-watch-badge">15 Menit</span>
+                  <div class="slider-control-cluster">
+                    <input type="number" id="max-watch-input" class="slider-number-input" min="2" max="1440" step="1" value="15" title="Ketik waktu tonton maksimal (menit)" />
+                    <span class="slider-val-badge" id="max-watch-badge">15 Menit</span>
+                  </div>
                 </div>
-                <input type="range" id="max-watch-slider" class="range-input" min="2" max="60" step="1" value="15" />
+                <input type="range" id="max-watch-slider" class="range-input" min="2" max="180" step="1" value="15" />
               </div>
             </div>
 
@@ -455,9 +601,12 @@
                   <label class="form-label" style="margin-bottom:0;" for="fixed-duration-slider">
                     Durasi Menonton Tetap:
                   </label>
-                  <span class="slider-val-badge" id="fixed-duration-badge">60 Menit</span>
+                  <div class="slider-control-cluster">
+                    <input type="number" id="fixed-duration-input" class="slider-number-input" min="5" max="4320" step="5" value="60" title="Ketik durasi menonton tetap (menit)" />
+                    <span class="slider-val-badge" id="fixed-duration-badge">60 Menit</span>
+                  </div>
                 </div>
-                <input type="range" id="fixed-duration-slider" class="range-input" min="5" max="360" step="5" value="60" />
+                <input type="range" id="fixed-duration-slider" class="range-input" min="5" max="720" step="5" value="60" />
               </div>
             </div>
 
@@ -483,7 +632,10 @@
                 <label class="form-label" style="margin-bottom:0;" for="total-duration-slider">
                   Batas Durasi Total Siaran:
                 </label>
-                <span class="slider-val-badge" id="total-duration-badge">72 Jam (4320 mnt)</span>
+                <div class="slider-control-cluster">
+                  <input type="number" id="total-duration-input" class="slider-number-input" min="0" max="43200" step="10" value="4320" title="Ketik batas total durasi siaran (menit, 0 = nonstop)" />
+                  <span class="slider-val-badge" id="total-duration-badge">72 Jam (4320 mnt)</span>
+                </div>
               </div>
               <input type="range" id="total-duration-slider" class="range-input" min="0" max="4320" step="60" value="4320" />
               <div style="font-size:0.72rem;color:var(--text-dim);margin-top:6px;">
@@ -497,9 +649,12 @@
                 <label class="form-label" style="margin-bottom:0;" for="ramp-up-slider">
                   Laju Akselerasi (Ramp-Up Rate):
                 </label>
-                <span class="slider-val-badge" id="ramp-up-badge">40 View/mnt</span>
+                <div class="slider-control-cluster">
+                  <input type="number" id="ramp-up-input" class="slider-number-input" min="1" max="50000" step="5" value="40" title="Ketik laju penambahan bot per menit (bisa ribuan untuk skala enterprise)" />
+                  <span class="slider-val-badge" id="ramp-up-badge">40 View/mnt</span>
+                </div>
               </div>
-              <input type="range" id="ramp-up-slider" class="range-input" min="5" max="150" step="5" value="40" />
+              <input type="range" id="ramp-up-slider" class="range-input" min="5" max="1000" step="5" value="40" />
             </div>
 
             <!-- Interaction Settings: Tap-Tap Like & Live Chat -->
@@ -521,10 +676,13 @@
                     <span class="switch-slider"></span>
                     <span>❤️ Tap-Tap Love Stream (Floating Hearts)</span>
                   </label>
-                  <span id="session-like-rate-badge" class="slider-val-badge">60 Like/mnt</span>
+                  <div class="slider-control-cluster">
+                    <input type="number" id="session-like-input" class="slider-number-input" min="0" max="10000" step="10" value="60" title="Ketik jumlah like per menit" />
+                    <span id="session-like-rate-badge" class="slider-val-badge">60 Like/mnt</span>
+                  </div>
                 </div>
                 <div id="session-like-slider-box" style="margin-top:8px;">
-                  <input type="range" id="session-like-slider" class="range-input" min="10" max="300" step="10" value="60" />
+                  <input type="range" id="session-like-slider" class="range-input" min="0" max="500" step="10" value="60" />
                 </div>
               </div>
 
@@ -536,7 +694,10 @@
                     <span class="switch-slider"></span>
                     <span>💬 Otomatis Komentar / Live Chat Bot</span>
                   </label>
-                  <span id="session-comment-interval-badge" class="slider-val-badge">Tiap 20 dtk</span>
+                  <div class="slider-control-cluster">
+                    <input type="number" id="session-comment-input" class="slider-number-input" min="1" max="3600" step="1" value="20" title="Ketik jeda antar komentar (detik)" />
+                    <span id="session-comment-interval-badge" class="slider-val-badge">Tiap 20 dtk</span>
+                  </div>
                 </div>
 
                 <div id="session-comment-options-box">
@@ -554,7 +715,7 @@
                     </div>
                     <div>
                       <label class="form-label" style="font-size:0.75rem;">Interval Jeda Chat:</label>
-                      <input type="range" id="session-comment-slider" class="range-input" min="5" max="60" step="5" value="20" style="margin-top:8px;" />
+                      <input type="range" id="session-comment-slider" class="range-input" min="5" max="120" step="5" value="20" style="margin-top:8px;" />
                     </div>
                   </div>
 
@@ -573,10 +734,13 @@
                     <span class="switch-slider"></span>
                     <span>🛒 Simulasi Klik Keranjang Oranye (Bag Click)</span>
                   </label>
-                  <span id="session-cart-rate-badge" class="slider-val-badge">15 Klik/mnt</span>
+                  <div class="slider-control-cluster">
+                    <input type="number" id="session-cart-input" class="slider-number-input" min="0" max="5000" step="5" value="15" title="Ketik frekuensi klik keranjang per menit" />
+                    <span id="session-cart-rate-badge" class="slider-val-badge">15 Klik/mnt</span>
+                  </div>
                 </div>
                 <div id="session-cart-slider-box" style="margin-top:8px;">
-                  <input type="range" id="session-cart-slider" class="range-input" min="0" max="60" step="5" value="15" />
+                  <input type="range" id="session-cart-slider" class="range-input" min="0" max="200" step="5" value="15" />
                   <div style="font-size:0.72rem;color:var(--text-dim);margin-top:4px;">
                     Memicu sinyal konversi katalog belanja untuk menaikkan peringkat live ke FYP/Trending Shopee.
                   </div>
@@ -1167,12 +1331,15 @@
                   <span class="switch-slider"></span>
                   <span>❤️ Default Tap-Tap Like (Love Stream)</span>
                 </label>
-                <span id="global-like-rate-badge" class="slider-val-badge">60 Like/mnt</span>
+                <div class="slider-control-cluster">
+                  <input type="number" id="global-like-rate-input" class="slider-number-input" min="0" max="10000" step="10" value="60" title="Ketik default like rate per menit" />
+                  <span id="global-like-rate-badge" class="slider-val-badge">60 Like/mnt</span>
+                </div>
               </div>
               <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:8px;">
                 Frekuensi tap love per menit yang disuntikkan secara alami oleh bot aktif.
               </div>
-              <input type="range" id="global-like-rate-slider" class="range-input" min="10" max="300" step="10" value="60" />
+              <input type="range" id="global-like-rate-slider" class="range-input" min="10" max="500" step="10" value="60" />
             </div>
 
             <!-- Master Auto Comment -->
@@ -1183,12 +1350,15 @@
                   <span class="switch-slider"></span>
                   <span>💬 Default Auto Live Chat Komentar</span>
                 </label>
-                <span id="global-comment-interval-badge" class="slider-val-badge">Tiap 20 dtk</span>
+                <div class="slider-control-cluster">
+                  <input type="number" id="global-comment-interval-input" class="slider-number-input" min="1" max="3600" step="1" value="20" title="Ketik default jeda komentar (detik)" />
+                  <span id="global-comment-interval-badge" class="slider-val-badge">Tiap 20 dtk</span>
+                </div>
               </div>
               <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:8px;">
                 Jeda waktu pengiriman chat otomatis antar-bot (disertai variasi waktu acak anti-spam).
               </div>
-              <input type="range" id="global-comment-interval-slider" class="range-input" min="5" max="60" step="5" value="20" />
+              <input type="range" id="global-comment-interval-slider" class="range-input" min="5" max="120" step="5" value="20" />
 
               <div class="form-group" style="margin-top:14px;">
                 <label class="form-label" style="font-size:0.8rem;">Kategori Bank Komentar Default:</label>
@@ -1913,6 +2083,7 @@
           <thead>
             <tr>
               <th>Waktu</th>
+              <th>Klien / Toko</th>
               <th>Nama Siaran</th>
               <th>Room ID</th>
               <th>Durasi</th>
@@ -1920,7 +2091,8 @@
               <th>Likes</th>
               <th>Chat</th>
               <th>Keranjang</th>
-              <th>Alasan Berhenti</th>
+              <th>Status</th>
+              <th style="text-align:center;">Aksi Cepat</th>
             </tr>
           </thead>
           <tbody id="history-table-body">
@@ -1952,81 +2124,373 @@
     </button>
   </div>
 
-  <!-- Security Settings Modal -->
+  <!-- Security & Account Settings Modal (Single Operator & Idle Timeout) -->
   <div id="modal-security-settings" class="modal-overlay">
     <div class="modal-content" style="max-width:540px;">
       <div class="panel-header" style="margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:1.3rem;">🔐</span>
-          <h3 style="font-size:1.15rem;font-weight:700;color:var(--text-main);margin:0;">Pengaturan Keamanan Akses</h3>
+          <span style="font-size:1.3rem;">⚙️</span>
+          <h3 style="font-size:1.15rem;font-weight:700;color:var(--text-main);margin:0;">Pengaturan Akun Operator & Sesi</h3>
         </div>
         <button type="button" id="btn-close-sec-settings" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;">✕</button>
       </div>
 
       <div class="modal-body" style="padding:10px 0 0 0;">
-        <!-- Status Overview -->
-        <div class="sec-setting-item">
+        <!-- Inactivity Idle Timeout Section -->
+        <div class="sec-setting-item" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg-glass);border:1px solid var(--border-glass);border-radius:var(--radius-sm);margin-bottom:16px;">
           <div>
-            <div class="sec-setting-title">Status Security Gatekeeper</div>
-            <div class="sec-setting-desc" id="sec-status-text">Proteksi aktif (Wajib Password saat login)</div>
+            <div class="sec-setting-title" style="font-weight:700;font-size:0.9rem;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+              <span>⏱️</span> Batas Waktu Idle (Auto-Logout)
+            </div>
+            <div class="sec-setting-desc" style="font-size:0.76rem;color:var(--text-dim);margin-top:2px;">
+              Sesi otomatis keluar jika tidak ada interaksi mouse/keyboard (Default 120 Menit).
+            </div>
           </div>
-          <div>
-            <label class="toggle-switch-label">
-              <input type="checkbox" id="toggle-security-active" checked>
-              <span class="switch-slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div class="sec-setting-item">
-          <div>
-            <div class="sec-setting-title">2FA WhatsApp Verification</div>
-            <div class="sec-setting-desc">Kirim kode OTP ke nomor WhatsApp Admin saat login baru</div>
-          </div>
-          <div>
-            <label class="toggle-switch-label">
-              <input type="checkbox" id="toggle-2fa-whatsapp">
-              <span class="switch-slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div class="sec-setting-item">
-          <div>
-            <div class="sec-setting-title">Batas Waktu Sesi (Auto-Lock)</div>
-            <div class="sec-setting-desc">Layar terkunci otomatis jika tidak ada aktivitas</div>
-          </div>
-          <div>
-            <select id="select-session-timeout" class="form-select" style="padding:6px 10px;font-size:0.8rem;width:auto;min-width:110px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="select-session-timeout" class="form-select" style="padding:6px 10px;font-size:0.82rem;width:auto;min-width:125px;">
               <option value="15">15 Menit</option>
               <option value="30">30 Menit</option>
-              <option value="60" selected>60 Menit</option>
-              <option value="180">3 Jam</option>
-              <option value="720">12 Jam</option>
+              <option value="60">60 Menit (1 Jam)</option>
+              <option value="120" selected>120 Menit (2 Jam)</option>
+              <option value="240">240 Menit (4 Jam)</option>
+              <option value="480">480 Menit (8 Jam)</option>
+              <option value="1440">1 Hari (24 Jam)</option>
             </select>
+            <button type="button" id="btn-save-timeout" class="btn btn-primary" style="padding:6px 12px;font-size:0.78rem;">
+              Simpan
+            </button>
           </div>
         </div>
 
-        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-glass);">
-          <h4 style="font-size:0.92rem;font-weight:700;color:var(--text-main);margin-bottom:12px;">Ubah Master Password</h4>
-          <div id="change-pass-alert" style="display:none;padding:8px 12px;border-radius:var(--radius-sm);font-size:0.8rem;margin-bottom:10px;"></div>
+        <!-- Single Operator Account Credentials Section -->
+        <div style="padding-top:14px;border-top:1px solid var(--border-glass);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <h4 style="font-size:0.92rem;font-weight:700;color:var(--text-main);margin:0;display:flex;align-items:center;gap:6px;">
+              <span>👤</span> Kredensial Operator (Single User)
+            </h4>
+            <span style="font-size:0.72rem;color:var(--shopee-primary);background:rgba(238,77,45,0.1);border:1px solid rgba(238,77,45,0.25);padding:2px 8px;border-radius:12px;font-weight:700;">
+              Master Account
+            </span>
+          </div>
+
+          <div id="change-pass-alert" style="display:none;padding:10px 14px;border-radius:var(--radius-sm);font-size:0.8rem;line-height:1.4;margin-bottom:12px;"></div>
+
           <form id="form-change-password">
             <div style="margin-bottom:10px;">
-              <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Password Lama</label>
-              <input type="password" id="input-old-password" class="form-input" placeholder="Masukkan password lama..." style="padding:8px 12px;font-size:0.85rem;" required>
+              <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;" for="input-change-username">
+                Username Operator
+              </label>
+              <input type="text" id="input-change-username" class="form-input" placeholder="Masukkan username baru..." style="padding:8px 12px;font-size:0.85rem;" required>
             </div>
             <div style="margin-bottom:10px;">
-              <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Password Baru (Min 6 Karakter)</label>
-              <input type="password" id="input-new-password" class="form-input" placeholder="Masukkan password baru..." style="padding:8px 12px;font-size:0.85rem;" required>
+              <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;" for="input-old-password">
+                Password Saat Ini / Lama <span style="color:#ef4444;">*</span> (Wajib untuk verifikasi)
+              </label>
+              <input type="password" id="input-old-password" class="form-input" placeholder="Masukkan password saat ini..." style="padding:8px 12px;font-size:0.85rem;" required>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;" for="input-new-password">
+                Password Baru (Opsional, minimal 6 karakter jika ingin diubah)
+              </label>
+              <input type="password" id="input-new-password" class="form-input" placeholder="Kosongkan jika hanya ingin mengubah username..." style="padding:8px 12px;font-size:0.85rem;">
             </div>
             <div style="margin-bottom:14px;">
-              <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;">Konfirmasi Password Baru</label>
-              <input type="password" id="input-confirm-password" class="form-input" placeholder="Ulangi password baru..." style="padding:8px 12px;font-size:0.85rem;" required>
+              <label style="display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;" for="input-confirm-password">
+                Konfirmasi Password Baru
+              </label>
+              <input type="password" id="input-confirm-password" class="form-input" placeholder="Ulangi password baru..." style="padding:8px 12px;font-size:0.85rem;">
             </div>
-            <button type="submit" class="btn btn-emerald" style="width:100%;padding:10px;font-weight:600;font-size:0.85rem;">
-              Simpan Master Password Baru
+            <button type="submit" id="btn-save-credentials" class="btn btn-emerald" style="width:100%;padding:10px;font-weight:700;font-size:0.85rem;">
+              Simpan Perubahan Kredensial Operator
             </button>
           </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: DYNAMIC REAL-TIME VIEWER SCALING (ON-THE-FLY) -->
+  <!-- ===================================================================== -->
+  <div id="modal-scale-viewers" class="modal-overlay">
+    <div class="modal-content" style="max-width: 540px;">
+      <div class="panel-header" style="margin-bottom: 14px;">
+        <div>
+          <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <span>🎚️</span> Atur Viewers Siaran (Live Scaling)
+          </h3>
+          <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
+            Naikkan atau turunkan jumlah penonton secara halus tanpa mengganggu siaran.
+          </div>
+        </div>
+        <button type="button" id="btn-close-scale-modal" style="background: none; border: none; color: var(--text-dim); font-size: 1.2rem; cursor: pointer;">✕</button>
+      </div>
+
+      <input type="hidden" id="scale-campaign-id" value="" />
+
+      <!-- Campaign Info Box -->
+      <div style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 16px;">
+        <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);" id="scale-campaign-name">-</div>
+        <div style="font-size: 0.76rem; color: var(--text-dim); margin-top: 4px; display: flex; gap: 12px;">
+          <span>Room ID: <strong id="scale-room-id" style="color: #ff8c6d;">-</strong></span>
+          <span>Saat Ini Aktif: <strong id="scale-current-active" style="color: #10b981;">0</strong> Viewers</span>
+        </div>
+      </div>
+
+      <!-- Slider & Target Input (Unrestricted) -->
+      <div class="slider-container" style="margin-bottom: 16px;">
+        <div class="slider-header">
+          <label class="form-label" style="margin-bottom: 0;" for="scale-target-slider">
+            Target Viewers Baru:
+          </label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="number" id="scale-target-input" min="1" max="1000000" value="50" style="width: 95px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); font-weight: 800; text-align: center; font-size: 0.95rem;" title="Ketik angka bebas" />
+            <span class="slider-val-badge" id="scale-target-badge">50 Viewers</span>
+          </div>
+        </div>
+        <input 
+          type="range" 
+          id="scale-target-slider" 
+          class="range-input" 
+          min="1" 
+          max="50000" 
+          step="25" 
+          value="50" 
+        />
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary btn-scale-preset" data-val="100">100</button>
+          <button type="button" class="btn btn-secondary btn-scale-preset" data-val="500">500</button>
+          <button type="button" class="btn btn-secondary btn-scale-preset" data-val="1000">1.000</button>
+          <button type="button" class="btn btn-secondary btn-scale-preset" data-val="3000">3.000</button>
+          <button type="button" class="btn btn-secondary btn-scale-preset" data-val="5000">5.000</button>
+          <button type="button" class="btn btn-secondary btn-scale-preset" data-val="10000">10.000</button>
+          <button type="button" class="btn btn-secondary btn-scale-preset" data-val="25000">25.000</button>
+          <button type="button" class="btn btn-secondary btn-scale-preset" data-val="50000">50.000</button>
+        </div>
+      </div>
+
+      <!-- Live Notification / Churn Explainer -->
+      <div style="font-size: 0.75rem; line-height: 1.5; color: var(--text-dim); background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 16px;">
+        ℹ️ <strong>Mekanisme Smooth Churn:</strong><br>
+        • <strong>Jika Naik (Scale Up):</strong> Bot penonton baru akan dialirkan secara bertahap via rotasi residential proxy.<br>
+        • <strong>Jika Turun (Scale Down):</strong> Bot keluar perlahan (graceful disconnect) tanpa memutus penonton yang bertahan.
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" id="btn-cancel-scale" class="btn btn-secondary" style="padding: 8px 16px;">Batal</button>
+        <button type="button" id="btn-submit-scale" class="btn btn-primary" style="padding: 8px 20px;">
+          🚀 Terapkan Perubahan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: 1-CLICK QUICK RE-LIVE (CLONE LIVE RUNTIME) -->
+  <!-- ===================================================================== -->
+  <div id="modal-quick-relive" class="modal-overlay">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="panel-header" style="margin-bottom: 14px;">
+        <div>
+          <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <span>⚡</span> 1-Click Quick Re-Live (Siaran Baru)
+          </h3>
+          <div style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
+            Klien memulai live baru? Cukup tempelkan URL baru, seluruh konfigurasi akan ditransfer instan!
+          </div>
+        </div>
+        <button type="button" id="btn-close-relive-modal" style="background: none; border: none; color: var(--text-dim); font-size: 1.2rem; cursor: pointer;">✕</button>
+      </div>
+
+      <input type="hidden" id="relive-source-campaign-id" value="" />
+
+      <!-- Previous Config Summary -->
+      <div style="background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 16px;">
+        <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700; letter-spacing: 0.5px;">Konfigurasi Ditransfer:</div>
+        <div style="margin-top: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem;">
+          <div>🏢 Klien: <strong id="relive-client-name" style="color: var(--text-main);">-</strong></div>
+          <div>👥 Target Viewers: <strong id="relive-target-viewers" style="color: #06b6d4;">-</strong></div>
+          <div>⏱️ Mode Durasi: <strong id="relive-retention-mode" style="color: var(--text-main);">-</strong></div>
+          <div>❤️ Interaksi: <strong id="relive-interaction-summary" style="color: #ec4899;">Auto Like & Chat Aktif</strong></div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label class="form-label" for="relive-new-url-input">
+          URL / Session ID Shopee Live Baru <span>*</span>
+        </label>
+        <input 
+          type="text" 
+          id="relive-new-url-input" 
+          class="form-input" 
+          placeholder="Tempel URL atau Room ID live baru streamer..."
+          value=""
+          required
+        />
+        <div id="relive-detected-room" style="font-size: 0.75rem; color: #10b981; margin-top: 4px; display: none;">
+          ✓ Room ID terdeteksi: <strong id="relive-detected-room-id"></strong>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label" for="relive-new-name-input">
+          Label Sesi Baru (Opsional)
+        </label>
+        <input 
+          type="text" 
+          id="relive-new-name-input" 
+          class="form-input" 
+          placeholder="Contoh: Erigo Re-Live Part 2"
+          value=""
+        />
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" id="btn-cancel-relive" class="btn btn-secondary" style="padding: 8px 16px;">Batal</button>
+        <button type="button" id="btn-submit-relive" class="btn btn-emerald" style="padding: 8px 22px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+          <span>⚡</span> Luncurkan Re-Live Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: EXECUTIVE CLIENT PDF REPORT (INTERNA SOLUSI TEKNOLOGI) -->
+  <!-- ===================================================================== -->
+  <div id="modal-client-report" class="modal-overlay">
+    <div class="modal-content modal-report-sheet" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
+      <!-- Toolbar Action (Hidden in print) -->
+      <div class="report-screen-toolbar no-print" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--border-glass);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.1rem;">📄</span>
+          <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">Laporan Resmi Kinerja Siaran Shopee Live</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="btn-print-report" class="btn btn-emerald" style="padding: 6px 14px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+            <span>🖨️</span> Cetak / Simpan PDF
+          </button>
+          <button type="button" id="btn-close-report-modal" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">
+            Tutup
+          </button>
+        </div>
+      </div>
+
+      <!-- Printable Document Container -->
+      <div id="report-printable-area" class="report-printable-paper">
+        <!-- Letterhead Header -->
+        <div class="report-header-banner">
+          <div class="report-brand">
+            <div class="report-logo-box">IST</div>
+            <div>
+              <div class="report-company-name">PT. INTERNA SOLUSI TEKNOLOGI</div>
+              <div class="report-company-sub">Enterprise Live Streaming Infrastructure & Digital Traffic Acceleration</div>
+              <div class="report-company-contact">Web: www.internasolusi.com • Email: support@internasolusi.com • Jakarta, Indonesia</div>
+            </div>
+          </div>
+          <div class="report-badge-box">
+            <div class="report-doc-badge">OFFICIAL REPORT</div>
+            <div class="report-ref-no" id="rep-doc-id">DOC-IST-2026-001</div>
+          </div>
+        </div>
+
+        <div class="report-divider"></div>
+
+        <!-- Report Title & Summary -->
+        <div class="report-title-section">
+          <h1 class="report-main-title">EXECUTIVE STREAM PERFORMANCE REPORT</h1>
+          <div class="report-meta-grid">
+            <div class="report-meta-item">
+              <span class="report-meta-label">Nama Klien / Brand:</span>
+              <strong class="report-meta-val" id="rep-client-name">-</strong>
+            </div>
+            <div class="report-meta-item">
+              <span class="report-meta-label">Label Siaran:</span>
+              <strong class="report-meta-val" id="rep-stream-title">-</strong>
+            </div>
+            <div class="report-meta-item">
+              <span class="report-meta-label">Shopee Room ID:</span>
+              <strong class="report-meta-val" id="rep-room-id">-</strong>
+            </div>
+            <div class="report-meta-item">
+              <span class="report-meta-label">Waktu Pelaksanaan:</span>
+              <strong class="report-meta-val" id="rep-stream-date">-</strong>
+            </div>
+            <div class="report-meta-item">
+              <span class="report-meta-label">Durasi Siaran:</span>
+              <strong class="report-meta-val" id="rep-duration">-</strong>
+            </div>
+            <div class="report-meta-item">
+              <span class="report-meta-label">Status Siaran:</span>
+              <strong class="report-meta-val" id="rep-status">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Highlight KPI Metrics Grid -->
+        <div class="report-kpi-grid">
+          <div class="report-kpi-card">
+            <div class="report-kpi-num" id="rep-total-views">0</div>
+            <div class="report-kpi-title">Akumulasi Total Views</div>
+            <div class="report-kpi-desc">Total impresi penonton masuk selama sesi live</div>
+          </div>
+          <div class="report-kpi-card">
+            <div class="report-kpi-num" id="rep-peak-viewers">0</div>
+            <div class="report-kpi-title">Puncak Concurrent Viewers</div>
+            <div class="report-kpi-desc">Jumlah penonton serentak tertinggi tercatat</div>
+          </div>
+          <div class="report-kpi-card">
+            <div class="report-kpi-num" id="rep-total-likes">0</div>
+            <div class="report-kpi-title">Total Interaksi Likes</div>
+            <div class="report-kpi-desc">Dorongan algoritma Shopee Live explore</div>
+          </div>
+          <div class="report-kpi-card">
+            <div class="report-kpi-num" id="rep-total-chats">0</div>
+            <div class="report-kpi-title">Obrolan Live Chat Cerdas</div>
+            <div class="report-kpi-desc">Komentar kontekstual interaktif & alami</div>
+          </div>
+          <div class="report-kpi-card">
+            <div class="report-kpi-num" id="rep-cart-clicks">0</div>
+            <div class="report-kpi-title">Aktivitas Klik Keranjang</div>
+            <div class="report-kpi-desc">Sinyal konversi belanja & checkout bot</div>
+          </div>
+          <div class="report-kpi-card">
+            <div class="report-kpi-num" id="rep-uptime-pct">99.8%</div>
+            <div class="report-kpi-title">Kestabilan Jaringan Proxy</div>
+            <div class="report-kpi-desc">Webshare Residential IP Zero-Interruption</div>
+          </div>
+        </div>
+
+        <!-- Traffic Analysis & Delivery Notes -->
+        <div class="report-section-box">
+          <h3 class="report-section-heading">Ringkasan Eksekutif & Verifikasi Infrastruktur</h3>
+          <p class="report-paragraph" id="rep-narrative">
+            Laporan ini menyatakan bahwa siaran Shopee Live telah didukung secara penuh menggunakan infrastruktur traffic acceleration terdedikasi dari Interna Solusi Teknologi. Seluruh penonton dialirkan melalui rotasi IP residential dengan kontrol retensi alami untuk memastikan siaran mendapatkan eksposur algoritma maksimal tanpa risiko pembatasan.
+          </p>
+        </div>
+
+        <!-- Signature & Stamp Seal -->
+        <div class="report-footer-section">
+          <div class="report-audit-note">
+            Dokumen ini dihasilkan secara otomatis oleh Enterprise Control Center Interna Solusi Teknologi.<br>
+            Tervalidasi secara kriptografis & bebas dari manipulasi manual.
+          </div>
+          <div class="report-signature-block">
+            <div class="report-sign-date" id="rep-sign-date">Jakarta, 14 September 2026</div>
+            <div class="report-sign-seal">
+              <div class="seal-inner">
+                <span>INTERNA</span>
+                <span>SOLUSI</span>
+                <span>VERIFIED</span>
+              </div>
+            </div>
+            <div class="report-sign-name">Operations & Infrastructure Lead</div>
+            <div class="report-sign-role">Interna Solusi Teknologi</div>
+          </div>
+        </div>
+
+        <!-- Copyright Footer -->
+        <div class="report-bottom-copyright">
+          © 2026 PT. Interna Solusi Teknologi. All Rights Reserved. Confidential - For Client Eyes Only.
         </div>
       </div>
     </div>

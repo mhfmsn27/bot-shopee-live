@@ -40,6 +40,7 @@ class ShopeeLiveWorker extends EventEmitter {
     this.watchDurationMs = options.watchDurationMs || null;
     this.heartbeatIntervalSec = options.heartbeatIntervalSec || 12;
     this.networkTimeout = options.networkTimeout || 1500;
+    this.autoStopOnStreamEnd = options.autoStopOnStreamEnd !== undefined ? Boolean(options.autoStopOnStreamEnd) : true;
 
     this.state = 'INITIAL'; // INITIAL | CONNECTING | VIEWING | LEAVING | STOPPED
     this.startTime = null;
@@ -64,7 +65,7 @@ class ShopeeLiveWorker extends EventEmitter {
     this.fingerprint = generateDeviceFingerprint();
 
     // Play URL dari Shopee Live room info (FLV stream)
-    this.playUrl = null;
+    this.playUrl = options.playUrl || null;
     this.viewerCount = 0;
     this.streamConsumer = null;
   }
@@ -314,13 +315,6 @@ class ShopeeLiveWorker extends EventEmitter {
           return;
         }
 
-        // Deteksi siaran berakhir dari response server
-        if (pingRes && pingRes.isOnline === false) {
-          this.emit('room_ended', { workerId: this.id, roomId: this.roomId });
-          this.leave('room_ended');
-          return;
-        }
-
         // Update viewer count dari response real-time
         if (pingRes.viewerCount !== null && pingRes.viewerCount !== undefined) {
           this.viewerCount = pingRes.viewerCount;
@@ -333,8 +327,18 @@ class ShopeeLiveWorker extends EventEmitter {
           count: this.heartbeatCount,
           activeSec: Math.floor((Date.now() - this.startTime) / 1000),
           latencyMs: pingRes.latencyMs || 40,
-          isStreaming: !!(this.streamConsumer && this.streamConsumer.connected)
+          isStreaming: !!(this.streamConsumer && this.streamConsumer.connected),
+          isOnline: pingRes.isOnline !== false
         });
+
+        // Deteksi siaran berakhir dari response server
+        if (pingRes && pingRes.isOnline === false) {
+          this.emit('room_ended', { workerId: this.id, roomId: this.roomId });
+          if (this.autoStopOnStreamEnd) {
+            this.leave('room_ended');
+            return;
+          }
+        }
 
         this.scheduleNextHeartbeat();
       } catch (err) {

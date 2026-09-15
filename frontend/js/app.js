@@ -5,40 +5,27 @@
 // ============================================================================
 // GLOBAL AUTHENTICATION & ACCESS GATEKEEPER INTERCEPTOR
 // ============================================================================
-let sessionToken = localStorage.getItem('sb_session_token') || sessionStorage.getItem('sb_session_token') || '';
-let securityConfig = { enabled: true, sessionTimeoutMinutes: 60 };
-let inactivityTimer = null;
+// ============================================================================
+// GLOBAL AUTHENTICATION & ACCESS GATEKEEPER INTERCEPTOR
+// ============================================================================
+let securityConfig = { enabled: true, username: 'admin', sessionTimeoutMinutes: 120 };
+let lastUserActivityTime = Date.now();
+let idleCheckerInterval = null;
 let currentEventSource = null;
 
-// Monkey-patch window.fetch to automatically inject Bearer Token and catch 401 Unauthorized
+// Monkey-patch window.fetch to automatically include credentials and catch 401 Unauthorized
 const originalFetch = window.fetch;
 window.fetch = async function(url, options = {}) {
   options = options || {};
-  options.headers = options.headers || {};
-
-  if (sessionToken && typeof url === 'string' && url.includes('/api/')) {
-    if (options.headers instanceof Headers) {
-      if (!options.headers.has('Authorization')) {
-        options.headers.set('Authorization', `Bearer ${sessionToken}`);
-      }
-    } else if (Array.isArray(options.headers)) {
-      if (!options.headers.some(([k]) => k.toLowerCase() === 'authorization')) {
-        options.headers.push(['Authorization', `Bearer ${sessionToken}`]);
-      }
-    } else {
-      if (!options.headers['Authorization'] && !options.headers['authorization']) {
-        options.headers['Authorization'] = `Bearer ${sessionToken}`;
-      }
-    }
+  if (!options.credentials) {
+    options.credentials = 'same-origin';
   }
 
   const response = await originalFetch(url, options);
 
-  // Global 401 Unauthorized Interceptor
+  // Global 401 Unauthorized Interceptor: alihkan ke halaman login jika sesi kadaluwarsa/tidak sah
   if (response.status === 401 && typeof url === 'string' && url.includes('/api/') && !url.includes('/auth/login') && !url.includes('/auth/status')) {
-    if (typeof showSecurityGate === 'function') {
-      showSecurityGate('Sesi Anda telah kedaluwarsa atau belum terotentikasi. Silakan masukkan Master Password.');
-    }
+    window.location.href = '/login.html?reason=session_expired';
   }
 
   return response;
@@ -141,27 +128,24 @@ document.addEventListener('DOMContentLoaded', () => {
   function syncHybridModeUI() {
     if (!hybridCheckbox || !targetSlider) return;
     const isHybrid = hybridCheckbox.checked;
+    
+    // Pastikan batas slider tetap elastis (minimal 50.000 atau nilai input saat ini)
+    const currentVal = parseInt(targetSlider.value, 10) || 50;
+    targetSlider.max = Math.max(50000, currentVal);
+
     if (isHybrid) {
-      targetSlider.max = 1000;
       if (targetWarningText) {
-        targetWarningText.innerHTML = '<strong>Mode Hybrid Aktif:</strong> Akun ber-cookie diprioritaskan sebagai Anchor Viewers (like & chat). Kuota selebihnya dialirkan sebagai Guest Persistent Streamers via Residential Rotating Proxy.';
+        targetWarningText.innerHTML = '<strong>Mode Hybrid Elastis (Enterprise Scale):</strong> Akun ber-cookie diprioritaskan sebagai Anchor Viewers (like & chat interaktif). Seluruh kebutuhan viewers hingga puluhan ribu bot dialirkan sebagai Persistent Streamers via Multi-Proxy Residential tanpa batasan.';
       }
       if (targetWarningBox) {
         targetWarningBox.style.color = '#34d399';
       }
     } else {
-      const maxAllowed = Math.max(1, currentAvailableAccounts);
-      targetSlider.max = maxAllowed;
-      if (parseInt(targetSlider.value, 10) > maxAllowed) {
-        targetSlider.value = maxAllowed;
-        const badge = document.getElementById('target-viewers-badge');
-        if (badge) badge.textContent = `${maxAllowed} Viewers`;
-      }
       if (targetWarningText) {
-        targetWarningText.innerHTML = '<strong>Mode Standar:</strong> Pengiriman bot dibatasi maksimal sejumlah akun aktif terverifikasi yang tersedia.';
+        targetWarningText.innerHTML = '<strong>Mode Multi-Proxy Dedicated:</strong> Bebas mendistribusikan puluhan ribu bot viewers ke beberapa live klien dengan rotasi armada proxy residential.';
       }
       if (targetWarningBox) {
-        targetWarningBox.style.color = '#f59e0b';
+        targetWarningBox.style.color = '#38bdf8';
       }
     }
   }
@@ -224,26 +208,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnPreset24h = document.getElementById('btn-preset-24h');
   const btnPresetNonstop = document.getElementById('btn-preset-nonstop');
   const sliderTotalDuration = document.getElementById('total-duration-slider');
+  const inputTotalDuration = document.getElementById('total-duration-input');
   const badgeTotalDuration = document.getElementById('total-duration-badge');
 
   if (btnPreset72h && sliderTotalDuration && badgeTotalDuration) {
     btnPreset72h.addEventListener('click', () => {
       sliderTotalDuration.value = 4320;
-      badgeTotalDuration.textContent = '72 Jam (3 Hari)';
+      if (inputTotalDuration) inputTotalDuration.value = 4320;
+      badgeTotalDuration.textContent = '72 Jam (4320 mnt)';
       showNotification('⚡ Durasi diset: 72 Jam (3 Hari Nonstop)');
     });
   }
   if (btnPreset24h && sliderTotalDuration && badgeTotalDuration) {
     btnPreset24h.addEventListener('click', () => {
       sliderTotalDuration.value = 1440;
-      badgeTotalDuration.textContent = '24 Jam (1 Hari)';
+      if (inputTotalDuration) inputTotalDuration.value = 1440;
+      badgeTotalDuration.textContent = '24 Jam (1440 mnt)';
       showNotification('⏱️ Durasi diset: 24 Jam (1 Hari)');
     });
   }
   if (btnPresetNonstop && sliderTotalDuration && badgeTotalDuration) {
     btnPresetNonstop.addEventListener('click', () => {
       sliderTotalDuration.value = 0;
-      badgeTotalDuration.textContent = '♾️ Nonstop (24/7)';
+      if (inputTotalDuration) inputTotalDuration.value = 0;
+      badgeTotalDuration.textContent = '♾️ Nonstop';
       showNotification('♾️ Durasi diset: Nonstop (Standby 24/7)');
     });
   }
@@ -262,30 +250,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const name = (document.getElementById('campaign-name-input')?.value || '').trim();
+      const clientName = (document.getElementById('client-name-input')?.value || '').trim();
       const modeRadio = document.querySelector('input[name="retentionMode"]:checked');
       
       const isHybrid = document.getElementById('campaign-hybrid-mode')?.checked ?? true;
       
-      // Validasi Batasan Akun: Mode Standar vs Mode Hybrid
-      if (!isHybrid) {
-        if (currentAvailableAccounts <= 0) {
-          alert('⚠️ Seluruh akun aktif terverifikasi sedang digunakan menonton siaran live lain (0 akun tersedia). Silakan aktifkan Mode Hybrid Cerdas atau tunggu live lain selesai.');
-          return;
-        }
-
-        let requestedViewers = parseInt(document.getElementById('target-viewers-slider').value, 10) || 1;
-        if (requestedViewers > currentAvailableAccounts) {
-          requestedViewers = currentAvailableAccounts;
-          document.getElementById('target-viewers-slider').value = requestedViewers;
-          document.getElementById('target-viewers-badge').textContent = requestedViewers + ' Viewers';
-          showNotification(`ℹ️ Target dibatasi maksimal ${requestedViewers} viewers menyesuaikan akun terverifikasi yang sedang tersedia.`);
-        }
-      }
-
-      const requestedViewers = parseInt(document.getElementById('target-viewers-slider').value, 10) || 1;
+      // Ambil nilai target viewers dari input langsung atau slider (skala puluhan ribu bot view tanpa batasan)
+      const rawInp = document.getElementById('target-viewers-input')?.value;
+      const rawSlider = document.getElementById('target-viewers-slider')?.value;
+      const requestedViewers = parseInt(rawInp || rawSlider, 10) || 50;
 
       const payload = {
         name: name || undefined,
+        clientName: clientName || undefined,
         urlOrRoomId,
         targetViewers: requestedViewers,
         hybridMode: isHybrid,
@@ -482,9 +459,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Smart Scheduler & History Handlers
   setupSchedulerAndHistoryHandlers();
 
-  // Security Gatekeeper & Access Control Handlers
+  // Enterprise Agency & Dynamic Viewers Scaling Handlers
+  setupEnterpriseAgencyHandlers();
+
+  // Security & Operator Account Handlers
   setupSecurityGatekeeper();
-  checkAuthStatus();
 });
 
 // SSE Connection
@@ -494,8 +473,8 @@ function initSse() {
     currentEventSource = null;
   }
 
-  const sseUrl = sessionToken ? `/api/stream-events?token=${encodeURIComponent(sessionToken)}` : '/api/stream-events';
-  const eventSource = new EventSource(sseUrl);
+  // EventSource menggunakan cookie HttpOnly same-origin otomatis
+  const eventSource = new EventSource('/api/stream-events');
   currentEventSource = eventSource;
 
   eventSource.addEventListener('stats', (e) => {
@@ -667,9 +646,10 @@ function renderMultiCampaignsList(campaigns) {
 
     card.innerHTML = `
       <div>
-        <div style="font-weight:700;font-size:0.92rem;display:flex;align-items:center;gap:8px;">
+        <div style="font-weight:700;font-size:0.92rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           ${isRunning ? '<span class="pulse-dot"></span>' : '<span style="width:8px;height:8px;border-radius:50%;background:#94a3b8;"></span>'}
           ${escapeHtml(cmp.name)}
+          ${cmp.clientName ? `<span class="client-tag-badge">🏢 ${escapeHtml(cmp.clientName)}</span>` : ''}
           <span style="font-size:0.72rem;background:rgba(238,77,45,0.15);color:#ff8c6d;padding:2px 8px;border-radius:var(--radius-full);">
             Room ID: ${cmp.roomId}
           </span>
@@ -678,9 +658,17 @@ function renderMultiCampaignsList(campaigns) {
           👥 <strong>${cmp.activeViewers || 0}</strong> / ${cmp.targetViewers} Viewers • 🔥 Total ${(cmp.accumulatedViews || 0).toLocaleString('id-ID')} Views • ❤️ <strong>${(cmp.totalLikes || 0).toLocaleString('id-ID')}</strong> Likes • 💬 <strong>${(cmp.totalComments || 0).toLocaleString('id-ID')}</strong> Chat • 🛒 <strong>${(cmp.totalCartClicks || 0).toLocaleString('id-ID')}</strong> Keranjang • ${timeText} • <span style="color:#06b6d4;">${cmp.retentionMode}</span>
         </div>
       </div>
-      <div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         ${isRunning ? `
-          <button class="btn btn-secondary" style="padding:6px 12px;font-size:0.78rem;color:#f43f5e;" onclick="stopSingleCampaign('${cmp.id}')">
+          <button class="btn btn-secondary" style="padding:6px 10px;font-size:0.75rem;color:#06b6d4;" onclick="openScaleViewersModal('${cmp.id}', '${escapeHtml(cmp.name)}', ${cmp.targetViewers}, ${cmp.activeViewers || 0}, '${cmp.roomId}')" title="Ubah target viewer siaran ini secara langsung">
+            🎚️ Atur Viewers
+          </button>
+        ` : ''}
+        <button class="btn btn-secondary" style="padding:6px 10px;font-size:0.75rem;" onclick="openClientReportModal('${cmp.id}')" title="Buka dan cetak laporan resmi PDF untuk klien">
+          📄 Laporan PDF
+        </button>
+        ${isRunning ? `
+          <button class="btn btn-secondary" style="padding:6px 10px;font-size:0.75rem;color:#f43f5e;" onclick="stopSingleCampaign('${cmp.id}')">
             ⏹️ Hentikan Sesi
           </button>
         ` : `
@@ -3019,6 +3007,59 @@ function updateDashboardMetrics(metrics) {
     }
   }
 
+  // Update Global Capacity Pool Bar (Elastic Unlimited Scalability)
+  const elCapUsed = document.getElementById('capacity-used-count');
+  const elCapRem = document.getElementById('capacity-remaining-count');
+  const elCapProxies = document.getElementById('capacity-proxies-count');
+  const elCapBar = document.getElementById('capacity-progress-bar');
+  const elCapPct = document.getElementById('capacity-usage-pct');
+  const elCapTag = document.getElementById('capacity-status-tag');
+
+  const usedCap = typeof metrics.activeViewers === 'number' ? metrics.activeViewers : (metrics.activeWorkers || 0);
+  const isUnlimited = metrics.isUnlimitedCapacity || metrics.maxCapacity === 'Unlimited' || !metrics.maxCapacity || metrics.maxCapacity === 0;
+
+  if (elCapUsed) elCapUsed.textContent = usedCap.toLocaleString('id-ID');
+  if (elCapProxies && typeof metrics.aliveProxies === 'number') {
+    elCapProxies.textContent = metrics.aliveProxies > 0 ? metrics.aliveProxies.toLocaleString('id-ID') : '1.000+';
+  }
+
+  if (isUnlimited) {
+    if (elCapRem) elCapRem.textContent = 'Unlimited';
+    if (elCapBar) {
+      elCapBar.style.width = '100%';
+      elCapBar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4, #6366f1)';
+    }
+    if (elCapPct) elCapPct.textContent = `Mode Elastic: ${usedCap.toLocaleString('id-ID')} Bot Berjalan (Skalabilitas Puluhan Ribu Bebas Batas)`;
+    if (elCapTag) {
+      elCapTag.className = 'capacity-tag-optimal';
+      elCapTag.textContent = 'ELASTIS & BEBAS LIMIT';
+    }
+  } else {
+    const maxCap = parseInt(metrics.maxCapacity, 10) || 3000;
+    const remCap = Math.max(0, maxCap - usedCap);
+    const pct = Math.min(100, Math.round((usedCap / maxCap) * 100));
+    if (elCapRem) elCapRem.textContent = remCap.toLocaleString('id-ID');
+    if (elCapBar) {
+      elCapBar.style.width = `${pct}%`;
+      if (pct >= 95) elCapBar.style.background = 'linear-gradient(90deg, #f59e0b, #f43f5e)';
+      else if (pct >= 75) elCapBar.style.background = 'linear-gradient(90deg, #10b981, #f59e0b)';
+      else elCapBar.style.background = 'linear-gradient(90deg, #10b981, #06b6d4)';
+    }
+    if (elCapPct) elCapPct.textContent = `Penggunaan Kuota: ${pct}% (${usedCap.toLocaleString('id-ID')} dari ${maxCap.toLocaleString('id-ID')})`;
+    if (elCapTag) {
+      if (pct >= 95) {
+        elCapTag.className = 'capacity-tag-critical';
+        elCapTag.textContent = 'KAPASITAS PENUH';
+      } else if (pct >= 80) {
+        elCapTag.className = 'capacity-tag-warning';
+        elCapTag.textContent = 'BEBAN TINGGI';
+      } else {
+        elCapTag.className = 'capacity-tag-optimal';
+        elCapTag.textContent = 'OPTIMAL';
+      }
+    }
+  }
+
   // Update Batasan Akun Siap Pakai (tidak sedang digunakan di live lain)
   if (typeof metrics.availableAccounts === 'number') {
     currentAvailableAccounts = metrics.availableAccounts;
@@ -3043,18 +3084,10 @@ function updateDashboardMetrics(metrics) {
       }
     }
 
-    // Batasi nilai dan slider target viewers secara dinamis jika mode non-hybrid
+    // Pertahankan batas slider tetap elastis (skala puluhan ribu bot tanpa batas)
     if (slider) {
-      const isHybrid = document.getElementById('campaign-hybrid-mode')?.checked ?? true;
-      if (!isHybrid) {
-        const maxAllowed = Math.max(1, currentAvailableAccounts);
-        slider.max = maxAllowed;
-        if (parseInt(slider.value, 10) > maxAllowed) {
-          slider.value = maxAllowed;
-          if (badge) badge.textContent = `${maxAllowed} Viewers`;
-        }
-      } else {
-        slider.max = 1000;
+      if (parseInt(slider.max, 10) < 50000) {
+        slider.max = 50000;
       }
     }
 
@@ -3070,6 +3103,107 @@ function updateDashboardMetrics(metrics) {
   // Sinkronkan daftar multi-kampanye secara real-time setiap detik
   if (metrics.campaigns && Array.isArray(metrics.campaigns)) {
     renderMultiCampaignsList(metrics.campaigns);
+  }
+
+  // Sinkronkan telemetri kesehatan server & proxy fleet real-time
+  if (metrics.healthTelemetry) {
+    updateInfrastructureTelemetryUI(metrics.healthTelemetry);
+  }
+}
+
+/**
+ * Memperbarui widget visual Telemetri Infrastruktur & Proxy Fleet
+ * @param {object} telem
+ */
+function updateInfrastructureTelemetryUI(telem) {
+  if (!telem || typeof telem !== 'object') return;
+  const srv = telem.server || {};
+  const trf = telem.traffic || {};
+  const prx = telem.proxyFleet || {};
+
+  // 1. CPU Usage
+  const cpuVal = document.getElementById('telem-cpu-val');
+  const cpuBar = document.getElementById('telem-cpu-bar');
+  const cpuTag = document.getElementById('telem-cpu-tag');
+  const cpuSub = document.getElementById('telem-cpu-sub');
+  if (cpuVal) cpuVal.textContent = `${srv.cpuPercent || 0}%`;
+  if (cpuBar) cpuBar.style.width = `${Math.min(100, Math.max(0, srv.cpuPercent || 0))}%`;
+  if (cpuTag) {
+    const pct = srv.cpuPercent || 0;
+    cpuTag.textContent = pct > 80 ? 'Heavy Load' : (pct > 50 ? 'Moderate' : 'Optimal');
+    cpuTag.style.color = pct > 80 ? '#f43f5e' : (pct > 50 ? '#f59e0b' : '#34d399');
+  }
+  if (cpuSub) cpuSub.textContent = `${srv.cpuCores || 1} Cores | Load: ${srv.loadAvg || '0.00'}`;
+
+  // 2. RAM Memory Heap
+  const ramVal = document.getElementById('telem-ram-val');
+  const ramBar = document.getElementById('telem-ram-bar');
+  const ramTag = document.getElementById('telem-ram-tag');
+  const ramSub = document.getElementById('telem-ram-sub');
+  if (ramVal) ramVal.innerHTML = `${srv.memoryHeapUsedMb || 0} <small>/ ${srv.memoryHeapTotalMb || 0} MB</small>`;
+  if (ramBar) ramBar.style.width = `${Math.min(100, srv.memoryPercent || 0)}%`;
+  if (ramTag) {
+    const memPct = srv.memoryPercent || 0;
+    ramTag.textContent = memPct > 85 ? 'High Heap' : 'Stable';
+    ramTag.style.color = memPct > 85 ? '#f59e0b' : '#34d399';
+  }
+  if (ramSub) ramSub.textContent = `RSS: ${srv.memoryRssMb || 0} MB | Sys: ${srv.systemTotalRamGb || 0} GB`;
+
+  // 3. Event Loop Latency
+  const latVal = document.getElementById('telem-latency-val');
+  const latBar = document.getElementById('telem-latency-bar');
+  const latTag = document.getElementById('telem-latency-tag');
+  const latSub = document.getElementById('telem-latency-sub');
+  if (latVal) latVal.innerHTML = `${srv.eventLoopLatencyMs !== undefined ? srv.eventLoopLatencyMs : '0.0'} <small>ms</small>`;
+  if (latBar) {
+    const lat = srv.eventLoopLatencyMs || 1;
+    latBar.style.width = `${Math.min(100, Math.max(5, lat * 2))}%`;
+  }
+  if (latTag) {
+    latTag.textContent = srv.eventLoopStatus || 'Optimal';
+    latTag.style.color = srv.eventLoopBadgeClass === 'warning' ? '#f43f5e' : (srv.eventLoopBadgeClass === 'normal' ? '#f59e0b' : '#34d399');
+  }
+  if (latSub) latSub.textContent = `Zero-Lag Async I/O (${srv.platform || 'Node.js'})`;
+
+  // 4. Bot Workers
+  const wrkVal = document.getElementById('telem-workers-val');
+  const wrkBar = document.getElementById('telem-workers-bar');
+  const wrkSub = document.getElementById('telem-workers-sub');
+  if (wrkVal) wrkVal.textContent = (trf.activeWorkers || 0).toLocaleString('id-ID');
+  if (wrkBar) {
+    const w = trf.activeWorkers || 0;
+    wrkBar.style.width = `${Math.min(100, Math.max(5, (w / 1000) * 100))}%`;
+  }
+  if (wrkSub) wrkSub.textContent = `${trf.activeSessions || 0} Sesi Live Simultan | ${trf.totalChurnRotations || 0} Churn`;
+
+  // 5. Proxy Fleet Health
+  const prxVal = document.getElementById('telem-proxy-val');
+  const prxBar = document.getElementById('telem-proxy-bar');
+  const prxTag = document.getElementById('telem-proxy-tag');
+  const prxSub = document.getElementById('telem-proxy-sub');
+  if (prxVal) prxVal.innerHTML = `${(prx.alive || 0).toLocaleString('id-ID')} <small>/ ${(prx.total || 0).toLocaleString('id-ID')} IP</small>`;
+  if (prxBar) prxBar.style.width = `${Math.min(100, prx.healthPercent || 100)}%`;
+  if (prxTag) {
+    prxTag.textContent = `${prx.healthPercent || 100}% Health`;
+    prxTag.style.color = (prx.healthPercent || 100) > 80 ? '#38bdf8' : '#f59e0b';
+  }
+  if (prxSub) prxSub.textContent = `Avg Latensi: ${prx.avgLatencyMs || 0} ms | Leases: ${prx.activeLeases || 0}`;
+
+  // 6. Traffic Throughput & Bandwidth
+  const trfVal = document.getElementById('telem-traffic-val');
+  const trfBar = document.getElementById('telem-traffic-bar');
+  const trfSub = document.getElementById('telem-traffic-sub');
+  if (trfVal) trfVal.innerHTML = trf.currentThroughputFormatted || `${trf.currentThroughputKbps || '0.0'} <small>KB/s</small>`;
+  if (trfBar) {
+    const rate = trf.currentThroughputKbps || 0;
+    trfBar.style.width = `${Math.min(100, Math.max(5, (rate / 500) * 100))}%`;
+  }
+  if (trfSub) trfSub.textContent = `Total Transfer: ${trf.totalBandwidthMb || 0} MB`;
+
+  // Uptime
+  const uptimeBadge = document.getElementById('telemetry-uptime-badge');
+  if (uptimeBadge && srv.uptimeFormatted) {
+    uptimeBadge.textContent = `Uptime: ${srv.uptimeFormatted}`;
   }
 }
 
@@ -3766,8 +3900,8 @@ async function loadHistory() {
       if (elComm) elComm.textContent = (s.totalComments || 0).toLocaleString('id-ID');
       if (elCart) elCart.textContent = (s.totalCartClicks || 0).toLocaleString('id-ID');
 
-      if (data.history.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:18px;">Belum ada riwayat siaran tersimpan.</td></tr>';
+      if (!data.history || data.history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text-dim);padding:18px;">Belum ada riwayat siaran tersimpan.</td></tr>';
         return;
       }
 
@@ -3776,6 +3910,7 @@ async function loadHistory() {
         return `
           <tr>
             <td>${timeStr}</td>
+            <td><span class="client-tag-badge">🏢 ${escapeHtml(item.clientName || 'Umum')}</span></td>
             <td><strong>${escapeHtml(item.name)}</strong></td>
             <td><code>${item.roomId}</code></td>
             <td>${item.durationMinutes} mnt</td>
@@ -3784,6 +3919,14 @@ async function loadHistory() {
             <td style="color:#3b82f6;">${(item.totalComments || 0).toLocaleString('id-ID')}</td>
             <td style="color:#f97316;font-weight:700;">${(item.totalCartClicks || 0).toLocaleString('id-ID')}</td>
             <td><span class="status-pill" style="font-size:0.68rem;">${item.stopReason || 'selesai'}</span></td>
+            <td style="text-align:center;white-space:nowrap;">
+              <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.72rem;color:#10b981;margin-right:4px;" onclick="openQuickReliveModal('${item.id}', '${escapeHtml(item.clientName || '')}', '${escapeHtml(item.name || '')}', ${item.targetViewers || 50}, '${item.retentionMode || 'dynamic_churn'}')" title="Luncurkan siaran ulang (Re-Live) dengan 1-klik">
+                ⚡ Re-Live
+              </button>
+              <button class="btn btn-secondary" style="padding:4px 8px;font-size:0.72rem;" onclick="openClientReportModal('${item.id}')" title="Cetak Laporan PDF Resmi">
+                📄 PDF
+              </button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -3792,284 +3935,82 @@ async function loadHistory() {
 }
 
 // ============================================================================
-// SECURITY GATEKEEPER & ACCESS CONTROL CONTROLLER
+// OPERATOR ACCOUNT & INACTIVITY IDLE TIMEOUT CONTROLLER
 // ============================================================================
-function showSecurityGate(message = null) {
-  const overlay = document.getElementById('securityGateOverlay');
-  const alertBox = document.getElementById('secGateAlert');
-  const passInput = document.getElementById('secMasterPassword');
-  const formPassword = document.getElementById('secGateForm');
-  const formOtp = document.getElementById('secGateOtpForm');
 
-  if (overlay) {
-    overlay.classList.remove('unlocked');
-  }
-  if (formPassword) formPassword.style.display = 'block';
-  if (formOtp) formOtp.style.display = 'none';
+function initIdleInactivityTracker() {
+  lastUserActivityTime = Date.now();
 
-  if (alertBox) {
-    if (message) {
-      alertBox.className = 'sec-gate-alert alert-error';
-      alertBox.textContent = message;
-      alertBox.style.display = 'block';
-    } else {
-      alertBox.style.display = 'none';
+  // Listeners untuk merekam setiap aktivitas operator
+  ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, () => {
+      lastUserActivityTime = Date.now();
+    }, { passive: true });
+  });
+
+  // Pemeriksaan idle berkala setiap 15 detik
+  if (idleCheckerInterval) clearInterval(idleCheckerInterval);
+  idleCheckerInterval = setInterval(async () => {
+    const timeoutMins = securityConfig.sessionTimeoutMinutes || 120;
+    const maxIdleMs = timeoutMins * 60 * 1000;
+    const idleElapsed = Date.now() - lastUserActivityTime;
+
+    if (idleElapsed >= maxIdleMs) {
+      clearInterval(idleCheckerInterval);
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (e) {}
+      window.location.href = '/login.html?reason=idle_timeout';
     }
-  }
-
-  if (passInput) {
-    passInput.value = '';
-    setTimeout(() => passInput.focus(), 150);
-  }
+  }, 15000);
 }
 
-function unlockSecurityGate() {
-  const overlay = document.getElementById('securityGateOverlay');
-  if (overlay) {
-    overlay.classList.add('unlocked');
-  }
-  resetInactivityTimer();
-
-  // Refresh dashboard data now that we are authenticated
-  if (typeof loadStatus === 'function') loadStatus();
-  if (typeof loadAccounts === 'function') loadAccounts();
-  if (typeof loadProxies === 'function') loadProxies();
-  if (typeof initSse === 'function') initSse();
-}
-
-function resetInactivityTimer() {
-  if (inactivityTimer) clearTimeout(inactivityTimer);
-  const timeoutMins = securityConfig.sessionTimeoutMinutes || 60;
-  inactivityTimer = setTimeout(() => {
-    showSecurityGate(`Layar dikunci otomatis demi keamanan karena tidak ada aktivitas selama ${timeoutMins} menit.`);
-  }, timeoutMins * 60 * 1000);
-}
-
-async function checkAuthStatus() {
+async function loadOperatorProfile() {
   try {
-    const res = await fetch('/api/auth/status');
-    const data = await res.json();
-    if (data.config) {
-      securityConfig = data.config;
-      const statusText = document.getElementById('sec-status-text');
-      const toggleSec = document.getElementById('toggle-security-active');
-      const toggle2fa = document.getElementById('toggle-2fa-whatsapp');
-      const selectTimeout = document.getElementById('select-session-timeout');
+    const res = await fetch('/api/auth/user-profile');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && result.data) {
+        securityConfig.username = result.data.username || 'admin';
+        securityConfig.sessionTimeoutMinutes = result.data.sessionTimeoutMinutes || 120;
 
-      if (statusText) statusText.textContent = securityConfig.enabled ? 'Proteksi aktif (Wajib Password saat login)' : 'Proteksi dinonaktifkan (Akses publik bebas)';
-      if (toggleSec) toggleSec.checked = securityConfig.enabled !== false;
-      if (toggle2fa) toggle2fa.checked = !!securityConfig.enable2faWhatsapp;
-      if (selectTimeout) selectTimeout.value = String(securityConfig.sessionTimeoutMinutes || 60);
-    }
+        // Update UI badge username di top bar
+        const headerUser = document.getElementById('header-operator-username');
+        if (headerUser) headerUser.textContent = securityConfig.username;
 
-    if (data.config && data.config.enabled === false) {
-      unlockSecurityGate();
-      return;
-    }
+        // Update value input di modal
+        const inputChangeUser = document.getElementById('input-change-username');
+        if (inputChangeUser) inputChangeUser.value = securityConfig.username;
 
-    if (data.authenticated) {
-      unlockSecurityGate();
-    } else {
-      showSecurityGate(data.isBlocked ? 'IP Anda sedang diblokir sementara karena terlalu banyak percobaan gagal.' : null);
+        // Update dropdown timeout di modal
+        const selectTimeout = document.getElementById('select-session-timeout');
+        if (selectTimeout) selectTimeout.value = String(securityConfig.sessionTimeoutMinutes);
+      }
     }
   } catch (err) {
-    showSecurityGate();
+    console.warn('[App] Gagal memuat profil operator:', err.message);
   }
 }
 
 function setupSecurityGatekeeper() {
-  const overlay = document.getElementById('securityGateOverlay');
-  const formPassword = document.getElementById('secGateForm');
-  const formOtp = document.getElementById('secGateOtpForm');
-  const passInput = document.getElementById('secMasterPassword');
-  const rememberCheckbox = document.getElementById('secRememberMe');
-  const btnToggleEye = document.getElementById('btnToggleSecPassword');
-  const alertBox = document.getElementById('secGateAlert');
-  const card = document.querySelector('.security-gate-card');
-  const unlockText = document.getElementById('secUnlockText');
-  const unlockSpinner = document.getElementById('secUnlockSpinner');
-  const btnUnlock = document.getElementById('btnSecUnlock');
-  const otpInput = document.getElementById('secOtpCode');
-  const btnVerifyOtp = document.getElementById('btnSecVerifyOtp');
-  const btnBackToPass = document.getElementById('btnSecBackToPassword');
-  const btnLockScreen = document.getElementById('btn-lock-screen');
   const btnOpenSecurity = document.getElementById('btn-open-security');
   const modalSecSettings = document.getElementById('modal-security-settings');
   const btnCloseSecSettings = document.getElementById('btn-close-sec-settings');
   const formChangePassword = document.getElementById('form-change-password');
-  const toggleSecActive = document.getElementById('toggle-security-active');
-  const toggle2fa = document.getElementById('toggle-2fa-whatsapp');
+  const btnSaveTimeout = document.getElementById('btn-save-timeout');
   const selectTimeout = document.getElementById('select-session-timeout');
+  const btnLogout = document.getElementById('btn-logout');
 
-  // Inactivity Listeners
-  ['mousemove', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
-    window.addEventListener(evt, () => {
-      if (overlay && overlay.classList.contains('unlocked')) {
-        resetInactivityTimer();
-      }
-    }, { passive: true });
-  });
+  // Inisialisasi Idle Tracker & Muat Profil
+  initIdleInactivityTracker();
+  loadOperatorProfile();
 
-  // Toggle Password Visibility
-  if (btnToggleEye && passInput) {
-    btnToggleEye.addEventListener('click', () => {
-      const isPass = passInput.getAttribute('type') === 'password';
-      passInput.setAttribute('type', isPass ? 'text' : 'password');
-      btnToggleEye.textContent = isPass ? '🙈' : '👁️';
-    });
-  }
-
-  // Password Login Submission
-  if (formPassword) {
-    formPassword.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const password = passInput ? passInput.value.trim() : '';
-      const rememberMe = rememberCheckbox ? rememberCheckbox.checked : false;
-
-      if (!password) return;
-
-      if (btnUnlock) btnUnlock.disabled = true;
-      if (unlockText) unlockText.textContent = 'Memverifikasi...';
-      if (unlockSpinner) unlockSpinner.style.display = 'inline-block';
-      if (alertBox) alertBox.style.display = 'none';
-
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password, rememberMe })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          if (data.requireOtp) {
-            formPassword.style.display = 'none';
-            formOtp.style.display = 'block';
-            if (alertBox) {
-              alertBox.className = 'sec-gate-alert alert-info';
-              alertBox.textContent = data.message || 'Kode OTP telah dikirimkan ke WhatsApp Admin.';
-              alertBox.style.display = 'block';
-            }
-            if (otpInput) {
-              otpInput.value = '';
-              setTimeout(() => otpInput.focus(), 150);
-            }
-          } else if (data.token) {
-            sessionToken = data.token;
-            if (rememberMe) {
-              localStorage.setItem('sb_session_token', data.token);
-            } else {
-              sessionStorage.setItem('sb_session_token', data.token);
-            }
-            document.cookie = `sb_session=${data.token}; path=/; max-age=${data.timeoutMinutes * 60}; SameSite=Strict`;
-            unlockSecurityGate();
-            showNotification('🔓 Akses Berhasil Terbuka.');
-          }
-        } else {
-          if (card) {
-            card.classList.remove('shake');
-            void card.offsetWidth;
-            card.classList.add('shake');
-          }
-          if (alertBox) {
-            alertBox.className = 'sec-gate-alert alert-error';
-            alertBox.textContent = data.error || 'Master Password salah.';
-            alertBox.style.display = 'block';
-          }
-          if (passInput) passInput.select();
-        }
-      } catch (err) {
-        if (alertBox) {
-          alertBox.className = 'sec-gate-alert alert-error';
-          alertBox.textContent = `Error: ${err.message}`;
-          alertBox.style.display = 'block';
-        }
-      } finally {
-        if (btnUnlock) btnUnlock.disabled = false;
-        if (unlockText) unlockText.textContent = 'Buka Kunci Akses (Unlock)';
-        if (unlockSpinner) unlockSpinner.style.display = 'none';
-      }
-    });
-  }
-
-  // 2FA WhatsApp OTP Submission
-  if (formOtp) {
-    formOtp.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const otp = otpInput ? otpInput.value.trim() : '';
-      const rememberMe = rememberCheckbox ? rememberCheckbox.checked : false;
-
-      if (!otp) return;
-
-      if (btnVerifyOtp) btnVerifyOtp.disabled = true;
-      try {
-        const res = await fetch('/api/auth/verify-otp', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ otp, rememberMe })
-        });
-        const data = await res.json();
-
-        if (data.success && data.token) {
-          sessionToken = data.token;
-          if (rememberMe) {
-            localStorage.setItem('sb_session_token', data.token);
-          } else {
-            sessionStorage.setItem('sb_session_token', data.token);
-          }
-          document.cookie = `sb_session=${data.token}; path=/; max-age=${data.timeoutMinutes * 60}; SameSite=Strict`;
-          unlockSecurityGate();
-          showNotification('🔓 Verifikasi 2FA Sukses.');
-        } else {
-          if (card) {
-            card.classList.remove('shake');
-            void card.offsetWidth;
-            card.classList.add('shake');
-          }
-          if (alertBox) {
-            alertBox.className = 'sec-gate-alert alert-error';
-            alertBox.textContent = data.error || 'Kode OTP salah atau kedaluwarsa.';
-            alertBox.style.display = 'block';
-          }
-        }
-      } catch (err) {
-        if (alertBox) {
-          alertBox.className = 'sec-gate-alert alert-error';
-          alertBox.textContent = `Error: ${err.message}`;
-          alertBox.style.display = 'block';
-        }
-      } finally {
-        if (btnVerifyOtp) btnVerifyOtp.disabled = false;
-      }
-    });
-  }
-
-  if (btnBackToPass) {
-    btnBackToPass.addEventListener('click', () => {
-      formOtp.style.display = 'none';
-      formPassword.style.display = 'block';
-      if (alertBox) alertBox.style.display = 'none';
-    });
-  }
-
-  // Manual Lock Screen Button
-  if (btnLockScreen) {
-    btnLockScreen.addEventListener('click', async () => {
-      try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-      } catch (e) {}
-      sessionToken = '';
-      localStorage.removeItem('sb_session_token');
-      sessionStorage.removeItem('sb_session_token');
-      document.cookie = 'sb_session=; path=/; max-age=0;';
-      showSecurityGate('Layar telah dikunci.');
-      showNotification('🔒 Layar Dashboard Terkunci.');
-    });
-  }
-
-  // Security Settings Modal Open / Close
+  // Buka / Tutup Modal Akun & Sesi
   if (btnOpenSecurity && modalSecSettings) {
     btnOpenSecurity.addEventListener('click', () => {
+      loadOperatorProfile();
+      const changeAlert = document.getElementById('change-pass-alert');
+      if (changeAlert) changeAlert.style.display = 'none';
       modalSecSettings.classList.add('active');
     });
   }
@@ -4086,112 +4027,581 @@ function setupSecurityGatekeeper() {
     });
   }
 
-  // Change Password Form
+  // Tombol Logout
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      if (confirm('Apakah Anda yakin ingin keluar dari Shopee Live View Bot Pro?')) {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (e) {}
+        window.location.href = '/login.html?reason=logged_out';
+      }
+    });
+  }
+
+  // Simpan Pengaturan Batas Waktu Idle / Timeout
+  if (btnSaveTimeout && selectTimeout) {
+    btnSaveTimeout.addEventListener('click', async () => {
+      const newTimeout = parseInt(selectTimeout.value, 10) || 120;
+      btnSaveTimeout.disabled = true;
+      btnSaveTimeout.textContent = 'Menyimpan...';
+
+      try {
+        const res = await fetch('/api/auth/session-timeout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionTimeoutMinutes: newTimeout })
+        });
+        const data = await res.json();
+        if (data.success) {
+          securityConfig.sessionTimeoutMinutes = newTimeout;
+          lastUserActivityTime = Date.now(); // reset timer
+          showNotification(`⏱️ Batas waktu idle berhasil diatur ke ${newTimeout} menit.`);
+        }
+      } catch (err) {
+        showNotification('Gagal menyimpan batas waktu idle: ' + err.message, 'error');
+      } finally {
+        btnSaveTimeout.disabled = false;
+        btnSaveTimeout.textContent = 'Simpan';
+      }
+    });
+  }
+
+  // Form Ubah Kredensial Operator (Username dan/atau Password)
   if (formChangePassword) {
     formChangePassword.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const newUsername = document.getElementById('input-change-username').value.trim();
       const oldPassword = document.getElementById('input-old-password').value;
       const newPassword = document.getElementById('input-new-password').value;
       const confirmPassword = document.getElementById('input-confirm-password').value;
       const changeAlert = document.getElementById('change-pass-alert');
+      const btnSubmit = document.getElementById('btn-save-credentials');
 
-      if (newPassword !== confirmPassword) {
+      if (newPassword && newPassword !== confirmPassword) {
         if (changeAlert) {
           changeAlert.className = 'sec-gate-alert alert-error';
+          changeAlert.style.background = 'rgba(239, 68, 68, 0.12)';
+          changeAlert.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+          changeAlert.style.color = '#fca5a5';
           changeAlert.textContent = 'Konfirmasi password baru tidak cocok!';
           changeAlert.style.display = 'block';
         }
         return;
       }
 
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Menyimpan Kredensial...';
+      }
+
       try {
-        const res = await fetch('/api/auth/change-password', {
+        const res = await fetch('/api/auth/change-credentials', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ oldPassword, newPassword })
+          body: JSON.stringify({
+            oldPassword,
+            newUsername,
+            newPassword: newPassword || null
+          })
         });
+
         const data = await res.json();
+
         if (data.success) {
           if (changeAlert) {
-            changeAlert.className = 'sec-gate-alert alert-info';
-            changeAlert.textContent = '✅ Master Password berhasil diubah! Silakan login ulang.';
+            changeAlert.className = 'sec-gate-alert alert-success';
+            changeAlert.style.background = 'rgba(16, 185, 129, 0.12)';
+            changeAlert.style.border = '1px solid rgba(16, 185, 129, 0.35)';
+            changeAlert.style.color = '#6ee7b7';
+            changeAlert.textContent = '✅ ' + (data.message || 'Kredensial operator berhasil diperbarui!');
             changeAlert.style.display = 'block';
           }
+
+          // Update username di UI
+          if (data.username) {
+            securityConfig.username = data.username;
+            const headerUser = document.getElementById('header-operator-username');
+            if (headerUser) headerUser.textContent = data.username;
+          }
+
+          // Reset input password
+          document.getElementById('input-old-password').value = '';
+          document.getElementById('input-new-password').value = '';
+          document.getElementById('input-confirm-password').value = '';
+
+          showNotification('👤 Profil & Kredensial Operator Berhasil Diperbarui.');
           setTimeout(() => {
             if (modalSecSettings) modalSecSettings.classList.remove('active');
-            showSecurityGate('Password telah diubah. Silakan login dengan password baru.');
-          }, 1500);
+          }, 1800);
         } else {
           if (changeAlert) {
             changeAlert.className = 'sec-gate-alert alert-error';
-            changeAlert.textContent = data.message || 'Gagal mengubah password.';
+            changeAlert.style.background = 'rgba(239, 68, 68, 0.12)';
+            changeAlert.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+            changeAlert.style.color = '#fca5a5';
+            changeAlert.textContent = '❌ ' + (data.message || data.error || 'Gagal mengubah kredensial.');
             changeAlert.style.display = 'block';
           }
         }
       } catch (err) {
         if (changeAlert) {
           changeAlert.className = 'sec-gate-alert alert-error';
-          changeAlert.textContent = `Error: ${err.message}`;
+          changeAlert.style.background = 'rgba(239, 68, 68, 0.12)';
+          changeAlert.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+          changeAlert.style.color = '#fca5a5';
+          changeAlert.textContent = 'Error: ' + err.message;
           changeAlert.style.display = 'block';
         }
-      }
-    });
-  }
-
-  // Toggle Security Active
-  if (toggleSecActive) {
-    toggleSecActive.addEventListener('change', async (e) => {
-      const enabled = e.target.checked;
-      try {
-        const res = await fetch('/api/auth/toggle', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled })
-        });
-        const data = await res.json();
-        const statusText = document.getElementById('sec-status-text');
-        if (statusText) statusText.textContent = data.enabled ? 'Proteksi aktif (Wajib Password saat login)' : 'Proteksi dinonaktifkan (Akses publik bebas)';
-        showNotification(data.enabled ? '🔐 Proteksi Security Gatekeeper Diaktifkan' : '⚠️ Proteksi Security Gatekeeper Dinonaktifkan');
-      } catch (err) {
-        showNotification(`❌ Error: ${err.message}`);
-      }
-    });
-  }
-
-  // Toggle 2FA WhatsApp
-  if (toggle2fa) {
-    toggle2fa.addEventListener('change', async (e) => {
-      const enable2faWhatsapp = e.target.checked;
-      try {
-        await fetch('/api/auth/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enable2faWhatsapp })
-        });
-        showNotification(enable2faWhatsapp ? '📲 2FA WhatsApp OTP Diaktifkan' : '2FA WhatsApp Dinonaktifkan');
-      } catch (err) {
-        showNotification(`❌ Error: ${err.message}`);
-      }
-    });
-  }
-
-  // Timeout Select
-  if (selectTimeout) {
-    selectTimeout.addEventListener('change', async (e) => {
-      const sessionTimeoutMinutes = parseInt(e.target.value, 10);
-      try {
-        await fetch('/api/auth/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionTimeoutMinutes })
-        });
-        securityConfig.sessionTimeoutMinutes = sessionTimeoutMinutes;
-        resetInactivityTimer();
-        showNotification(`⏱️ Auto-Lock diatur ke ${sessionTimeoutMinutes} menit.`);
-      } catch (err) {
-        showNotification(`❌ Error: ${err.message}`);
+      } finally {
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = 'Simpan Perubahan Kredensial Operator';
+        }
       }
     });
   }
 }
 
+// ============================================================================
+// ENTERPRISE AGENCY FEATURES: PRESETS, SCALING, RE-LIVE & EXECUTIVE REPORT
+// ============================================================================
+
+function setupEnterpriseAgencyHandlers() {
+  // 1. Quick Presets & 2-Way Sync for Target Viewers Slider and Direct Input
+  const mainSlider = document.getElementById('target-viewers-slider');
+  const mainInput = document.getElementById('target-viewers-input');
+  const mainBadge = document.getElementById('target-viewers-badge');
+
+  if (mainSlider && mainInput) {
+    mainSlider.addEventListener('input', () => {
+      mainInput.value = mainSlider.value;
+      if (mainBadge) mainBadge.textContent = `${parseInt(mainSlider.value, 10).toLocaleString('id-ID')} Viewers`;
+    });
+
+    mainInput.addEventListener('input', () => {
+      let val = parseInt(mainInput.value, 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > parseInt(mainSlider.max, 10)) {
+        mainSlider.max = Math.max(val, 50000);
+      }
+      mainSlider.value = val;
+      if (mainBadge) mainBadge.textContent = `${val.toLocaleString('id-ID')} Viewers`;
+    });
+  }
+
+  // Universal Two-Way Slider & Number Input Sync Helper (Auto-Expanding Range & Zero-Limiter)
+  function setupTwoWaySliderSync(sliderId, inputId, badgeId, formatFn, minLimit = 0, defaultMax = 100) {
+    const slider = document.getElementById(sliderId);
+    const input = document.getElementById(inputId);
+    const badge = badgeId ? document.getElementById(badgeId) : null;
+    if (!slider || !input) return;
+
+    slider.addEventListener('input', () => {
+      input.value = slider.value;
+      if (badge && formatFn) badge.textContent = formatFn(slider.value);
+    });
+
+    input.addEventListener('input', () => {
+      let val = parseFloat(input.value);
+      if (isNaN(val)) return;
+      if (val < minLimit) val = minLimit;
+      if (val > parseFloat(slider.max)) {
+        slider.max = Math.max(val, defaultMax);
+      }
+      slider.value = val;
+      if (badge && formatFn) badge.textContent = formatFn(val);
+    });
+  }
+
+  // 1. Two-Way Bindings for all Form Configuration Sliders & Companion Direct Inputs
+  setupTwoWaySliderSync('min-watch-slider', 'min-watch-input', 'min-watch-badge', v => `${v} Menit`, 1, 120);
+  setupTwoWaySliderSync('max-watch-slider', 'max-watch-input', 'max-watch-badge', v => `${v} Menit`, 2, 180);
+  setupTwoWaySliderSync('fixed-duration-slider', 'fixed-duration-input', 'fixed-duration-badge', v => `${v} Menit`, 5, 720);
+  setupTwoWaySliderSync('total-duration-slider', 'total-duration-input', 'total-duration-badge', v => {
+    const num = parseInt(v, 10) || 0;
+    return num === 0 ? '♾️ Nonstop' : `${Math.floor(num / 60)} Jam (${num} mnt)`;
+  }, 0, 4320);
+  setupTwoWaySliderSync('ramp-up-slider', 'ramp-up-input', 'ramp-up-badge', v => `${parseInt(v, 10).toLocaleString('id-ID')} View/mnt`, 1, 1000);
+  setupTwoWaySliderSync('session-like-slider', 'session-like-input', 'session-like-rate-badge', v => `${parseInt(v, 10).toLocaleString('id-ID')} Like/mnt`, 0, 500);
+  setupTwoWaySliderSync('session-comment-slider', 'session-comment-input', 'session-comment-interval-badge', v => `Tiap ${v} dtk`, 1, 120);
+  setupTwoWaySliderSync('session-cart-slider', 'session-cart-input', 'session-cart-rate-badge', v => `${parseInt(v, 10).toLocaleString('id-ID')} Klik/mnt`, 0, 200);
+
+  // Global Interaction Tab Sliders
+  setupTwoWaySliderSync('global-like-rate-slider', 'global-like-rate-input', 'global-like-rate-badge', v => `${parseInt(v, 10).toLocaleString('id-ID')} Like/mnt`, 0, 500);
+  setupTwoWaySliderSync('global-comment-interval-slider', 'global-comment-interval-input', 'global-comment-interval-badge', v => `Tiap ${v} dtk`, 1, 120);
+
+  // Telemetry Monitor Manual Refresh Button & Initial Load
+  const btnRefreshTelem = document.getElementById('btn-refresh-telemetry');
+  if (btnRefreshTelem) {
+    btnRefreshTelem.addEventListener('click', async () => {
+      try {
+        btnRefreshTelem.disabled = true;
+        btnRefreshTelem.textContent = '⏳ Memuat...';
+        const res = await fetch('/api/system/health-telemetry');
+        const data = await res.json();
+        if (data.success && data.data) {
+          updateInfrastructureTelemetryUI(data.data);
+          showNotification('📊 Telemetri infrastruktur server & proxy diperbarui.');
+        }
+      } catch (e) {
+        console.warn('Telemetry refresh error:', e.message);
+      } finally {
+        btnRefreshTelem.disabled = false;
+        btnRefreshTelem.textContent = '🔄 Refresh';
+      }
+    });
+  }
+
+  document.querySelectorAll('#viewer-quick-presets .btn-sm-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.dataset.val, 10);
+      if (mainSlider && !isNaN(val)) {
+        if (val > parseInt(mainSlider.max, 10)) {
+          mainSlider.max = Math.max(val, 50000);
+        }
+        mainSlider.value = val;
+        if (mainInput) mainInput.value = val;
+        if (mainBadge) mainBadge.textContent = `${val.toLocaleString('id-ID')} Viewers`;
+        document.querySelectorAll('#viewer-quick-presets .btn-sm-preset').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    });
+  });
+
+  // 2. Client Presets Management
+  loadClientPresets();
+
+  const presetSelect = document.getElementById('client-preset-select');
+  if (presetSelect) {
+    presetSelect.addEventListener('change', () => {
+      const val = presetSelect.value;
+      if (!val) return;
+      try {
+        const preset = JSON.parse(val);
+        if (preset.clientName) {
+          const inpClient = document.getElementById('client-name-input');
+          if (inpClient) inpClient.value = preset.clientName;
+        }
+        if (preset.name) {
+          const inpCmp = document.getElementById('campaign-name-input');
+          if (inpCmp) inpCmp.value = preset.name;
+        }
+        if (preset.targetViewers) {
+          const slider = document.getElementById('target-viewers-slider');
+          const inp = document.getElementById('target-viewers-input');
+          const badge = document.getElementById('target-viewers-badge');
+          if (slider) {
+            if (preset.targetViewers > parseInt(slider.max, 10)) slider.max = Math.max(preset.targetViewers, 50000);
+            slider.value = preset.targetViewers;
+          }
+          if (inp) inp.value = preset.targetViewers;
+          if (badge) badge.textContent = `${preset.targetViewers.toLocaleString('id-ID')} Viewers`;
+        }
+        if (preset.retentionMode) {
+          const radio = document.querySelector(`input[name="retentionMode"][value="${preset.retentionMode}"]`);
+          if (radio) radio.checked = true;
+        }
+        showNotification(`🏢 Preset toko "${preset.clientName}" dimuat.`);
+      } catch (e) {}
+    });
+  }
+
+  const btnSavePreset = document.getElementById('btn-save-current-preset');
+  if (btnSavePreset) {
+    btnSavePreset.addEventListener('click', async () => {
+      const clientName = (document.getElementById('client-name-input')?.value || '').trim();
+      if (!clientName) {
+        alert('Harap isi Nama Klien / Brand terlebih dahulu sebelum menyimpan preset.');
+        return;
+      }
+      const rawInp = document.getElementById('target-viewers-input')?.value;
+      const rawSlider = document.getElementById('target-viewers-slider')?.value;
+      const targetViewers = parseInt(rawInp || rawSlider, 10) || 50;
+      const retentionMode = document.querySelector('input[name="retentionMode"]:checked')?.value || 'dynamic_churn';
+      const name = (document.getElementById('campaign-name-input')?.value || '').trim();
+
+      try {
+        const res = await fetch('/api/campaigns/presets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientName,
+            name: name || `${clientName} Stream Preset`,
+            targetViewers,
+            retentionMode
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(`💾 Preset untuk "${clientName}" berhasil disimpan.`);
+          loadClientPresets();
+        } else {
+          alert(data.message || 'Gagal menyimpan preset.');
+        }
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
+
+  // 3. Dynamic Real-Time Live Scaling Modal (Unrestricted Scaling)
+  const modalScale = document.getElementById('modal-scale-viewers');
+  const btnCloseScale = document.getElementById('btn-close-scale-modal');
+  const btnCancelScale = document.getElementById('btn-cancel-scale');
+  const sliderScale = document.getElementById('scale-target-slider');
+  const inputScale = document.getElementById('scale-target-input');
+  const badgeScale = document.getElementById('scale-target-badge');
+  const btnSubmitScale = document.getElementById('btn-submit-scale');
+
+  if (btnCloseScale) btnCloseScale.addEventListener('click', () => modalScale?.classList.remove('active'));
+  if (btnCancelScale) btnCancelScale.addEventListener('click', () => modalScale?.classList.remove('active'));
+
+  if (sliderScale && inputScale && badgeScale) {
+    sliderScale.addEventListener('input', () => {
+      inputScale.value = sliderScale.value;
+      badgeScale.textContent = `${parseInt(sliderScale.value, 10).toLocaleString('id-ID')} Viewers`;
+    });
+    inputScale.addEventListener('input', () => {
+      let v = parseInt(inputScale.value, 10);
+      if (isNaN(v) || v < 1) v = 1;
+      if (v > parseInt(sliderScale.max, 10)) {
+        sliderScale.max = Math.max(v, 50000);
+      }
+      sliderScale.value = v;
+      badgeScale.textContent = `${v.toLocaleString('id-ID')} Viewers`;
+    });
+  }
+
+  document.querySelectorAll('.btn-scale-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.dataset.val, 10);
+      if (sliderScale && inputScale && badgeScale && !isNaN(val)) {
+        if (val > parseInt(sliderScale.max, 10)) {
+          sliderScale.max = Math.max(val, 50000);
+        }
+        sliderScale.value = val;
+        inputScale.value = val;
+        badgeScale.textContent = `${val.toLocaleString('id-ID')} Viewers`;
+      }
+    });
+  });
+
+  if (btnSubmitScale) {
+    btnSubmitScale.addEventListener('click', async () => {
+      const campaignId = document.getElementById('scale-campaign-id')?.value;
+      const newTarget = parseInt(sliderScale?.value, 10);
+      if (!campaignId || isNaN(newTarget) || newTarget < 1) return;
+
+      try {
+        btnSubmitScale.disabled = true;
+        btnSubmitScale.textContent = 'Menerapkan...';
+        const res = await fetch(`/api/campaigns/${campaignId}/scale-viewers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newTargetViewers: newTarget })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(`🚀 Target viewers berhasil diubah ke ${newTarget} viewers.`);
+          modalScale?.classList.remove('active');
+          loadStatus();
+        } else {
+          alert(`Gagal mengubah target viewers:\n${data.message}`);
+        }
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btnSubmitScale.disabled = false;
+        btnSubmitScale.textContent = '🚀 Terapkan Perubahan';
+      }
+    });
+  }
+
+  // 4. Quick Re-Live Modal
+  const modalRelive = document.getElementById('modal-quick-relive');
+  const btnCloseRelive = document.getElementById('btn-close-relive-modal');
+  const btnCancelRelive = document.getElementById('btn-cancel-relive');
+  const inputReliveUrl = document.getElementById('relive-new-url-input');
+  const previewReliveRoom = document.getElementById('relive-detected-room');
+  const previewReliveRoomId = document.getElementById('relive-detected-room-id');
+  const btnSubmitRelive = document.getElementById('btn-submit-relive');
+
+  if (btnCloseRelive) btnCloseRelive.addEventListener('click', () => modalRelive?.classList.remove('active'));
+  if (btnCancelRelive) btnCancelRelive.addEventListener('click', () => modalRelive?.classList.remove('active'));
+
+  if (inputReliveUrl && previewReliveRoom && previewReliveRoomId) {
+    inputReliveUrl.addEventListener('input', () => {
+      const v = inputReliveUrl.value.trim();
+      const match = v.match(/session[=_](\d+)/i) || v.match(/room[=_](\d+)/i) || v.match(/^(\d{5,})$/);
+      if (match) {
+        previewReliveRoomId.textContent = match[1];
+        previewReliveRoom.style.display = 'block';
+      } else {
+        previewReliveRoom.style.display = 'none';
+      }
+    });
+  }
+
+  if (btnSubmitRelive) {
+    btnSubmitRelive.addEventListener('click', async () => {
+      const sourceCampaignId = document.getElementById('relive-source-campaign-id')?.value;
+      const newUrlOrRoomId = inputReliveUrl?.value.trim();
+      const newName = (document.getElementById('relive-new-name-input')?.value || '').trim();
+
+      if (!newUrlOrRoomId) {
+        alert('Harap masukkan URL atau Room ID Shopee Live baru.');
+        return;
+      }
+
+      try {
+        btnSubmitRelive.disabled = true;
+        btnSubmitRelive.textContent = 'Meluncurkan Re-Live...';
+        const res = await fetch('/api/campaigns/quick-relive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sourceCampaignId,
+            newUrlOrRoomId,
+            newName: newName || undefined
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showNotification(`⚡ Re-Live Berhasil Dimulai untuk ${data.campaign?.clientName || 'Klien'} (${data.campaign?.targetViewers} Viewers)!`);
+          modalRelive?.classList.remove('active');
+          loadStatus();
+          loadAccounts();
+          loadLogs();
+        } else {
+          alert(`Gagal Meluncurkan Re-Live:\n${data.message}`);
+        }
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btnSubmitRelive.disabled = false;
+        btnSubmitRelive.innerHTML = '<span>⚡</span> Luncurkan Re-Live Sekarang';
+      }
+    });
+  }
+
+  // 5. Executive Client Report Modal
+  const modalReport = document.getElementById('modal-client-report');
+  const btnCloseReport = document.getElementById('btn-close-report-modal');
+  const btnPrintReport = document.getElementById('btn-print-report');
+
+  if (btnCloseReport) btnCloseReport.addEventListener('click', () => modalReport?.classList.remove('active'));
+  if (btnPrintReport) btnPrintReport.addEventListener('click', () => window.print());
+}
+
+async function loadClientPresets() {
+  const select = document.getElementById('client-preset-select');
+  if (!select) return;
+  try {
+    const res = await fetch('/api/campaigns/presets');
+    const data = await res.json();
+    if (data.success && Array.isArray(data.presets)) {
+      select.innerHTML = '<option value="">-- Pilih Toko Langganan / Input Manual Baru --</option>' + 
+        data.presets.map(p => `
+          <option value="${escapeHtml(JSON.stringify(p))}">🏢 ${escapeHtml(p.clientName)} (${p.targetViewers} Viewers - ${p.retentionMode})</option>
+        `).join('');
+    }
+  } catch (e) {}
+}
+
+window.openScaleViewersModal = function(campaignId, name, currentTarget, currentActive, roomId) {
+  const modal = document.getElementById('modal-scale-viewers');
+  if (!modal) return;
+
+  document.getElementById('scale-campaign-id').value = campaignId;
+  document.getElementById('scale-campaign-name').textContent = name || 'Sesi Shopee Live';
+  document.getElementById('scale-room-id').textContent = roomId || '-';
+  document.getElementById('scale-current-active').textContent = (currentActive || 0).toLocaleString('id-ID');
+
+  const slider = document.getElementById('scale-target-slider');
+  const input = document.getElementById('scale-target-input');
+  const badge = document.getElementById('scale-target-badge');
+
+  const target = currentTarget || 50;
+  if (slider && target > parseInt(slider.max, 10)) {
+    slider.max = Math.max(target, 50000);
+  }
+  if (slider) slider.value = target;
+  if (input) input.value = target;
+  if (badge) badge.textContent = `${target.toLocaleString('id-ID')} Viewers`;
+
+  modal.classList.add('active');
+};
+
+window.openQuickReliveModal = function(sourceCampaignId, clientName, name, targetViewers, retentionMode) {
+  const modal = document.getElementById('modal-quick-relive');
+  if (!modal) return;
+
+  document.getElementById('relive-source-campaign-id').value = sourceCampaignId || '';
+  document.getElementById('relive-client-name').textContent = clientName || 'Klien Toko';
+  document.getElementById('relive-target-viewers').textContent = `${(targetViewers || 50).toLocaleString('id-ID')} Viewers`;
+  document.getElementById('relive-retention-mode').textContent = retentionMode || 'Dynamic Churn';
+
+  const inpUrl = document.getElementById('relive-new-url-input');
+  if (inpUrl) inpUrl.value = '';
+
+  const inpName = document.getElementById('relive-new-name-input');
+  if (inpName) inpName.value = name ? `${name} (Re-Live)` : '';
+
+  const prevRoom = document.getElementById('relive-detected-room');
+  if (prevRoom) prevRoom.style.display = 'none';
+
+  modal.classList.add('active');
+};
+
+window.openClientReportModal = async function(campaignId) {
+  const modal = document.getElementById('modal-client-report');
+  if (!modal) return;
+
+  try {
+    showNotification('📄 Menyiapkan laporan kinerja siaran...');
+    const res = await fetch(`/api/campaigns/${campaignId}/report-data`);
+    const data = await res.json();
+    if (!data.success || !data.report) {
+      alert('Data laporan tidak ditemukan atau sesi belum siap.');
+      return;
+    }
+
+    const r = data.report;
+    const docId = `DOC-IST-${new Date().getFullYear()}-${campaignId.substring(0, 6).toUpperCase()}`;
+
+    const elDocId = document.getElementById('rep-doc-id');
+    const elClient = document.getElementById('rep-client-name');
+    const elTitle = document.getElementById('rep-stream-title');
+    const elRoom = document.getElementById('rep-room-id');
+    const elDate = document.getElementById('rep-stream-date');
+    const elDur = document.getElementById('rep-duration');
+    const elStatus = document.getElementById('rep-status');
+    const elViews = document.getElementById('rep-total-views');
+    const elPeak = document.getElementById('rep-peak-viewers');
+    const elLikes = document.getElementById('rep-total-likes');
+    const elChats = document.getElementById('rep-total-chats');
+    const elCart = document.getElementById('rep-cart-clicks');
+    const elSignDate = document.getElementById('rep-sign-date');
+
+    if (elDocId) elDocId.textContent = docId;
+    if (elClient) elClient.textContent = r.clientName || 'Klien Toko Shopee';
+    if (elTitle) elTitle.textContent = r.name || 'Siaran Shopee Live';
+    if (elRoom) elRoom.textContent = r.roomId || '-';
+    if (elDate) elDate.textContent = r.startTime ? new Date(r.startTime).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) : '-';
+    if (elDur) elDur.textContent = `${r.durationMinutes || 0} Menit`;
+    if (elStatus) elStatus.textContent = r.status === 'RUNNING' ? '🟢 LIVE (SEDANG BERLANGSUNG)' : '✅ SELESAI';
+    if (elViews) elViews.textContent = (r.accumulatedViews || 0).toLocaleString('id-ID');
+    if (elPeak) elPeak.textContent = (r.peakViewers || r.targetViewers || 0).toLocaleString('id-ID');
+    if (elLikes) elLikes.textContent = (r.totalLikes || 0).toLocaleString('id-ID');
+    if (elChats) elChats.textContent = (r.totalComments || 0).toLocaleString('id-ID');
+    if (elCart) elCart.textContent = (r.totalCartClicks || 0).toLocaleString('id-ID');
+    if (elSignDate) {
+      elSignDate.textContent = `Jakarta, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    }
+
+    modal.classList.add('active');
+  } catch (err) {
+    alert(`Gagal memuat data laporan: ${err.message}`);
+  }
+};

@@ -68,8 +68,8 @@ async function runTests() {
   });
 
   assert.strictEqual(cmpStrict.hybridMode, false);
-  assert.strictEqual(cmpStrict.targetViewers, totalAccounts, 'Mode standar harus tetap clamp target ke total akun');
-  console.log(`    Mode Standar Target: ${cmpStrict.targetViewers} (di-clamp sesuai ${totalAccounts} akun)`);
+  assert.strictEqual(cmpStrict.targetViewers, totalAccounts + 100, 'Zero-Limiter: Target viewers tetap utuh (unconstrained)');
+  console.log(`    Mode Standar Target: ${cmpStrict.targetViewers} (Zero-Limiter unconstrained scale)`);
 
   retentionController.stopCampaignById(cmpStrict.id, 'test_finish');
   await sleep(500);

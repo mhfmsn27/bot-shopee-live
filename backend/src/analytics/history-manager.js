@@ -61,6 +61,7 @@ class HistoryManager extends EventEmitter {
       id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       campaignId: campaignMetrics.id || 'cmp-unknown',
       name: campaignMetrics.name || 'Siaran Shopee Live',
+      clientName: campaignMetrics.clientName || campaignMetrics.name || 'Pelanggan Shopee Live',
       roomId: campaignMetrics.roomId || '0',
       startTime: campaignMetrics.startTime 
         ? new Date(campaignMetrics.startTime).toISOString() 

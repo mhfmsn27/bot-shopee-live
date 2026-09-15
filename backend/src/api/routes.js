@@ -18,6 +18,7 @@ const realRegistrationPipeline = require('../identity/real-registration-pipeline
 const sqliteManager = require('../db/sqlite-manager');
 const authManager = require('../security/auth-manager');
 const protocolClient = require('../core/protocol-client');
+const systemTelemetry = require('../core/system-telemetry');
 
 // Inisialisasi pengawas keamanan proaktif (Canary Watchdog)
 canaryWatchdog.start();
@@ -79,6 +80,23 @@ router.get('/health', (req, res) => {
 });
 
 /**
+ * SISTEM TELEMETRI & INFRASTRUKTUR HEALTH MONITOR
+ * Menyediakan snapshot real-time CPU, RAM Heap, Event Loop Latency,
+ * Bandwidth data rate, dan kesehatan pool proxy armada enterprise.
+ */
+router.get('/system/health-telemetry', (req, res) => {
+  try {
+    const snapshot = systemTelemetry.getSnapshot(retentionController, proxyManager);
+    res.json({
+      success: true,
+      data: snapshot
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * AUTHENTICATION & ACCESS GATEKEEPER
  */
 router.get('/auth/status', (req, res) => {
@@ -90,14 +108,15 @@ router.get('/auth/status', (req, res) => {
   if (authHeader.startsWith('Bearer ')) {
     token = authHeader.slice(7).trim();
   } else if (req.headers.cookie) {
-    const match = req.headers.cookie.match(/sb_session=([^;]+)/);
-    if (match) token = match[1];
+    const match = req.headers.cookie.match(/(?:^|;\s*)sb_session=([^;]+)/);
+    if (match) token = decodeURIComponent(match[1]);
   }
   const verification = authManager.verifySessionToken(token);
 
   res.json({
     success: true,
     authenticated: verification.valid,
+    username: verification.username || null,
     config: authManager.getPublicConfig(),
     isBlocked
   });
@@ -106,23 +125,24 @@ router.get('/auth/status', (req, res) => {
 router.post('/auth/login', async (req, res) => {
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
   const userAgent = req.headers['user-agent'] || '';
-  const { password, rememberMe } = req.body;
+  const { username = 'admin', password, rememberMe } = req.body;
 
   if (authManager.isIpBlocked(clientIp)) {
     return res.status(429).json({
       success: false,
       blocked: true,
-      error: 'Terlalu banyak percobaan gagal. IP Anda diblokir selama 15 menit untuk alasan keamanan.'
+      error: 'Terlalu banyak percobaan gagal. IP Anda diblokir sementara selama 15 menit untuk alasan keamanan.'
     });
   }
 
-  const isValid = authManager.verifyPassword(password);
+  // Verifikasi kredensial Username & Password
+  const isValid = authManager.verifyCredentials(username, password);
   if (!isValid) {
     const record = authManager.recordFailedAttempt(clientIp);
     const remaining = authManager.maxFailedAttempts - (record ? record.count : 1);
     return res.status(401).json({
       success: false,
-      error: 'Master Password salah.',
+      error: 'Username atau Password yang Anda masukkan salah.',
       remainingAttempts: Math.max(0, remaining),
       blocked: remaining <= 0
     });
@@ -136,24 +156,33 @@ router.post('/auth/login', async (req, res) => {
     return res.json({
       success: true,
       requireOtp: true,
-      message: 'Password benar. Kode OTP telah dikirimkan ke nomor WhatsApp Admin.'
+      message: 'Kredensial valid. Kode OTP verifikasi telah dikirimkan ke nomor WhatsApp Admin.'
     });
   }
 
-  const session = authManager.createSession(clientIp, userAgent, rememberMe);
+  const session = authManager.createSession(username, clientIp, userAgent, rememberMe);
+  const cookieMaxAge = session.timeoutMinutes * 60; // dalam detik
+
+  // Set-Cookie HttpOnly; SameSite=Strict
+  res.setHeader(
+    'Set-Cookie',
+    `sb_session=${encodeURIComponent(session.token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${cookieMaxAge}`
+  );
+
   res.json({
     success: true,
     token: session.token,
+    username: session.username,
     expiresAt: session.expiresAt,
     timeoutMinutes: session.timeoutMinutes,
-    message: 'Autentikasi berhasil.'
+    message: 'Autentikasi operator berhasil.'
   });
 });
 
 router.post('/auth/verify-otp', (req, res) => {
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
   const userAgent = req.headers['user-agent'] || '';
-  const { otp, rememberMe } = req.body;
+  const { otp, rememberMe, username = 'admin' } = req.body;
 
   const validOtp = authManager.verifyOtp(otp);
   if (!validOtp) {
@@ -163,10 +192,18 @@ router.post('/auth/verify-otp', (req, res) => {
     });
   }
 
-  const session = authManager.createSession(clientIp, userAgent, rememberMe);
+  const session = authManager.createSession(username, clientIp, userAgent, rememberMe);
+  const cookieMaxAge = session.timeoutMinutes * 60;
+
+  res.setHeader(
+    'Set-Cookie',
+    `sb_session=${encodeURIComponent(session.token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${cookieMaxAge}`
+  );
+
   res.json({
     success: true,
     token: session.token,
+    username: session.username,
     expiresAt: session.expiresAt,
     timeoutMinutes: session.timeoutMinutes,
     message: 'Verifikasi 2FA berhasil.'
@@ -178,17 +215,63 @@ router.post('/auth/logout', (req, res) => {
   const authHeader = req.headers.authorization || '';
   if (authHeader.startsWith('Bearer ')) {
     token = authHeader.slice(7).trim();
+  } else if (req.headers.cookie) {
+    const match = req.headers.cookie.match(/(?:^|;\s*)sb_session=([^;]+)/);
+    if (match) token = decodeURIComponent(match[1]);
   }
-  authManager.destroySession(token);
-  res.json({ success: true, message: 'Sesi berhasil diakhiri.' });
+
+  if (token) {
+    authManager.destroySession(token);
+  }
+
+  // Hapus cookie sesi HttpOnly
+  res.setHeader('Set-Cookie', 'sb_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
+  res.json({ success: true, message: 'Sesi operator berhasil diakhiri.' });
 });
 
-router.post('/auth/change-password', (req, res) => {
-  const { oldPassword, newPassword } = req.body;
-  const result = authManager.changePassword(oldPassword, newPassword);
+router.get('/auth/user-profile', (req, res) => {
+  const publicConfig = authManager.getPublicConfig();
+  res.json({
+    success: true,
+    data: {
+      username: publicConfig.username || 'admin',
+      sessionTimeoutMinutes: publicConfig.sessionTimeoutMinutes || 120,
+      enabled: publicConfig.enabled,
+      updatedAt: publicConfig.updatedAt
+    }
+  });
+});
+
+router.post('/auth/change-credentials', (req, res) => {
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+  const userAgent = req.headers['user-agent'] || '';
+  const { oldPassword, newUsername, newPassword } = req.body;
+
+  const result = authManager.changeCredentials(oldPassword, newUsername, newPassword);
   if (!result.success) {
     return res.status(400).json(result);
   }
+
+  // Buatkan session baru untuk klien yang saat ini sedang aktif mengubah password
+  const newSession = authManager.createSession(result.username, clientIp, userAgent, false);
+  const cookieMaxAge = newSession.timeoutMinutes * 60;
+
+  res.setHeader(
+    'Set-Cookie',
+    `sb_session=${encodeURIComponent(newSession.token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${cookieMaxAge}`
+  );
+
+  res.json({
+    success: true,
+    message: result.message,
+    username: result.username,
+    timeoutMinutes: newSession.timeoutMinutes
+  });
+});
+
+router.post('/auth/session-timeout', (req, res) => {
+  const { sessionTimeoutMinutes } = req.body;
+  const result = authManager.updateSettings({ sessionTimeoutMinutes });
   res.json(result);
 });
 
@@ -259,6 +342,151 @@ router.post('/campaigns/:id/stop', (req, res) => {
 router.delete('/campaigns/:id', (req, res) => {
   const success = retentionController.removeCampaign(req.params.id);
   res.json({ success, message: success ? 'Kampanye dihapus.' : 'Kampanye tidak ditemukan.' });
+});
+
+// Real-Time Dynamic Viewer Scaling (Tambah / Kurangi Penonton di Tengah Siaran)
+router.post('/campaigns/:id/scale-viewers', (req, res) => {
+  try {
+    const rawTarget = req.body.targetViewers || req.body.newTargetViewers;
+    const targetViewers = parseInt(rawTarget, 10);
+    if (!targetViewers || isNaN(targetViewers) || targetViewers < 1) {
+      return res.status(400).json({ success: false, message: 'Jumlah target viewers tidak valid.' });
+    }
+    const result = retentionController.updateCampaignTargetViewers(req.params.id, targetViewers);
+    res.json({
+      success: true,
+      message: `Target viewers berhasil disesuaikan ke ${targetViewers}.`,
+      newTargetViewers: result.newTarget,
+      previousTargetViewers: result.oldTarget,
+      ...result
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// 1-Click Quick Re-Live (Lanjut kirim bot saat sesi live ganti/restart)
+router.post('/campaigns/quick-relive', async (req, res) => {
+  try {
+    const { sourceCampaignId, clientName, targetViewers } = req.body;
+    const newLiveUrl = req.body.newLiveUrl || req.body.newUrlOrRoomId || req.body.urlOrRoomId;
+    const newName = req.body.newName || req.body.name;
+
+    let baseConfig = null;
+    const existing = retentionController.campaigns.get(sourceCampaignId);
+    if (existing) {
+      baseConfig = { ...existing.getMetrics() };
+    } else {
+      const historyList = historyManager.getAllHistory();
+      const match = historyList.find(h => h.id === sourceCampaignId || h.campaignId === sourceCampaignId);
+      if (match) {
+        baseConfig = { ...match };
+      }
+    }
+
+    const payload = {
+      ...baseConfig,
+      shopeeLiveUrl: newLiveUrl || (baseConfig ? (baseConfig.rawInputUrl || baseConfig.liveUrl || baseConfig.roomId) : ''),
+      targetViewers: targetViewers ? parseInt(targetViewers, 10) : (baseConfig ? baseConfig.targetViewers : 100),
+      clientName: clientName || (baseConfig ? (baseConfig.clientName || baseConfig.name) : '')
+    };
+
+    delete payload.id;
+    if (newName) payload.name = newName;
+
+    if (!payload.shopeeLiveUrl) {
+      return res.status(400).json({ success: false, message: 'URL / Room ID siaran baru wajib dimasukkan.' });
+    }
+
+    const campaign = retentionController.createCampaign(payload);
+    res.json({
+      success: true,
+      message: `⚡ Quick Re-Live [${campaign.name}] berhasil diluncurkan!`,
+      campaign
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Data Lengkap Laporan Eksekutif Klien (PDF Report Data)
+router.get('/campaigns/:id/report-data', (req, res) => {
+  const id = req.params.id;
+  const active = retentionController.campaigns.get(id);
+  if (active) {
+    return res.json({
+      success: true,
+      report: {
+        ...active.getMetrics(),
+        clientName: active.clientName || active.name,
+        isLive: true,
+        reportGeneratedAt: new Date().toISOString()
+      }
+    });
+  }
+
+  const historyList = historyManager.getAllHistory();
+  const match = historyList.find(h => h.id === id || h.campaignId === id);
+  if (match) {
+    return res.json({
+      success: true,
+      report: {
+        ...match,
+        isLive: false,
+        reportGeneratedAt: new Date().toISOString()
+      }
+    });
+  }
+
+  return res.status(404).json({ success: false, message: 'Data sesi siaran tidak ditemukan.' });
+});
+
+// Preset Toko / Klien Langganan
+router.get('/campaigns/presets', (req, res) => {
+  try {
+    const presets = sqliteManager.getConfig('client_presets') || [];
+    res.json({ success: true, presets });
+  } catch (err) {
+    res.json({ success: true, presets: [] });
+  }
+});
+
+router.post('/campaigns/presets', (req, res) => {
+  try {
+    const { targetViewers, retentionMode, category } = req.body;
+    const clientName = (req.body.clientName || req.body.name || '').trim();
+    const name = (req.body.name || `${clientName} Preset`).trim();
+    if (!clientName && !name) {
+      return res.status(400).json({ success: false, message: 'Nama preset/klien wajib diisi.' });
+    }
+    let presets = sqliteManager.getConfig('client_presets') || [];
+    presets = presets.filter(p => p.name.toLowerCase() !== name.toLowerCase() && (!p.clientName || p.clientName.toLowerCase() !== clientName.toLowerCase()));
+    presets.unshift({
+      id: `preset-${Date.now()}`,
+      clientName: clientName || name,
+      name: name,
+      targetViewers: parseInt(targetViewers, 10) || 100,
+      retentionMode: retentionMode || 'dynamic_churn',
+      category: category || 'general',
+      savedAt: new Date().toISOString()
+    });
+    if (presets.length > 30) presets = presets.slice(0, 30);
+    sqliteManager.saveConfig('client_presets', presets);
+    res.json({ success: true, message: `Preset Toko [${clientName || name}] berhasil disimpan.`, presets });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/campaigns/presets/:id', (req, res) => {
+  try {
+    let presets = sqliteManager.getConfig('client_presets') || [];
+    presets = presets.filter(p => p.id !== req.params.id && p.name !== req.params.id);
+    sqliteManager.saveConfig('client_presets', presets);
+    res.json({ success: true, message: 'Preset berhasil dihapus.', presets });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Backward-compatible single-campaign endpoints

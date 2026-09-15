@@ -12,7 +12,7 @@ const https = require('https');
 const authManager = require('../security/auth-manager');
 
 // Buat session token yang valid dari AuthManager
-const sessionObj = authManager.createSession('127.0.0.1', 'AuditRunner/1.0', true);
+const sessionObj = authManager.createSession('admin', '127.0.0.1', 'AuditRunner/1.0', true);
 const auditSessionToken = sessionObj.token;
 
 // 1. Intercept global.fetch

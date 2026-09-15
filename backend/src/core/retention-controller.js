@@ -19,6 +19,7 @@ const historyManager = require('../analytics/history-manager');
 const streamSentinel = require('./stream-sentinel');
 const streamScheduler = require('../scheduler/stream-scheduler');
 const sqliteManager = require('../db/sqlite-manager');
+const systemTelemetry = require('./system-telemetry');
 
 class MultiCampaignManager extends EventEmitter {
   constructor() {
@@ -27,6 +28,14 @@ class MultiCampaignManager extends EventEmitter {
     this.primaryCampaignId = null;
     this.logsBuffer = [];
     this.statsInterval = null;
+    this.maxPoolCapacity = 0; // 0 = Bebas / Unlimited Elastic Scaling
+
+    try {
+      const sysConf = sqliteManager.getConfig('system');
+      if (sysConf && sysConf.maxConcurrentWorkers !== undefined) {
+        this.maxPoolCapacity = parseInt(sysConf.maxConcurrentWorkers, 10) || 0;
+      }
+    } catch (e) {}
 
     // Mulai polling interval statistik gabungan reguler
     this.startGlobalStatsInterval();
@@ -87,6 +96,14 @@ class MultiCampaignManager extends EventEmitter {
       throw new Error('Sistem dalam mode proteksi Circuit Breaker: Terdeteksi perubahan anti-bot / response challenge dari Shopee yang berisiko memblokir akun. Silakan reset Circuit Breaker di menu Keamanan jika ingin tetap melanjutkan.');
     }
 
+    // Validasi Pool Capacity (Jika maxPoolCapacity dikonfigurasi > 0; jika 0 / undefined = Bebas/Unlimited)
+    const requestedViewers = Math.max(1, parseInt(config.targetViewers, 10) || 50);
+    const currentActive = this.getActiveViewerCount();
+    if (this.maxPoolCapacity > 0 && (currentActive + requestedViewers > this.maxPoolCapacity) && !config.bypassCapacityLimit) {
+      const remaining = Math.max(0, this.maxPoolCapacity - currentActive);
+      throw new Error(`Kapasitas pool tidak mencukupi: Permintaan ${requestedViewers} viewer melebihi sisa kapasitas server (${remaining} dari batas ${this.maxPoolCapacity} bot view).`);
+    }
+
     const campaign = new CampaignInstance(config);
 
     // Forward events dari campaign instance ke manager
@@ -133,6 +150,8 @@ class MultiCampaignManager extends EventEmitter {
     try {
       sqliteManager.saveActiveCampaignState({
         id: campaign.id,
+        name: campaign.name,
+        clientName: campaign.clientName || '',
         roomId: campaign.roomId,
         targetViewers: campaign.targetViewers,
         retentionMode: campaign.retentionMode,
@@ -320,6 +339,10 @@ class MultiCampaignManager extends EventEmitter {
 
     return {
       status: this.status,
+      maxCapacity: this.maxPoolCapacity > 0 ? this.maxPoolCapacity : 'Unlimited',
+      remainingCapacity: this.maxPoolCapacity > 0 ? Math.max(0, this.maxPoolCapacity - this.getActiveViewerCount()) : 'Unlimited',
+      capacityUsagePercent: this.maxPoolCapacity > 0 ? Math.min(100, Math.round((this.getActiveViewerCount() / this.maxPoolCapacity) * 100)) : 0,
+      isUnlimitedCapacity: !this.maxPoolCapacity || this.maxPoolCapacity <= 0,
       activeViewers: this.getActiveViewerCount(),
       accumulatedViews: this.getAggregateAccumulatedViews(),
       totalChurnRotations: this.getAggregateChurnCount(),
@@ -334,6 +357,7 @@ class MultiCampaignManager extends EventEmitter {
       totalLikes: this.getAggregateLikesCount(),
       totalComments: this.getAggregateCommentsCount(),
       totalCartClicks: this.getAggregateCartClicksCount(),
+      healthTelemetry: systemTelemetry.getSnapshot(this, proxyManager),
       campaigns: all,
       // Backward-compatible properties with single campaign view
       roomId: primaryMetrics.roomId || '',
@@ -399,6 +423,27 @@ class MultiCampaignManager extends EventEmitter {
     }
     if (!target) throw new Error('Tidak ada sesi siaran Shopee Live yang sedang aktif.');
     return target.sendInstantCartClick(count);
+  }
+
+  /**
+   * Menyesuaikan target penonton secara real-time saat siaran sedang berjalan (Live Scaling)
+   * @param {string} campaignId 
+   * @param {number} newTarget 
+   */
+  updateCampaignTargetViewers(campaignId, newTarget) {
+    const campaign = this.campaigns.get(campaignId);
+    if (!campaign) throw new Error('Sesi siaran tidak ditemukan.');
+    const parsedTarget = Math.max(1, parseInt(newTarget, 10));
+    const currentViewers = this.getActiveViewerCount();
+    const diff = parsedTarget - campaign.targetViewers;
+    if (this.maxPoolCapacity > 0 && diff > 0 && (currentViewers + diff > this.maxPoolCapacity)) {
+      const remaining = Math.max(0, this.maxPoolCapacity - currentViewers);
+      throw new Error(`Kapasitas pool tidak mencukupi: Penambahan ${diff} viewer melebihi sisa kapasitas server (${remaining} dari batas ${this.maxPoolCapacity} bot view).`);
+    }
+    const result = campaign.updateTargetViewers(parsedTarget);
+    this.emit('campaigns_updated', this.getAllCampaigns());
+    this.emit('stats', this.getMetrics());
+    return result;
   }
 }
 

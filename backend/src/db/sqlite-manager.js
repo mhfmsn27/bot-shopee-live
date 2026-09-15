@@ -206,6 +206,21 @@ class SqliteManager {
       );
     `);
 
+    // 8. Tabel Auth Sessions (Stateful Token Management & Revocation)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS auth_sessions (
+        token TEXT PRIMARY KEY,
+        username TEXT,
+        ip TEXT,
+        user_agent TEXT,
+        created_at INTEGER,
+        last_activity_at INTEGER,
+        expires_at INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON auth_sessions(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_sessions_token ON auth_sessions(token);
+    `);
+
     this.prepareStatements();
   }
 
@@ -282,6 +297,18 @@ class SqliteManager {
     this.stmtSelectAllActiveCampaignStates = this.db.prepare(`SELECT * FROM active_campaigns_state`);
     this.stmtDeleteActiveCampaignState = this.db.prepare(`DELETE FROM active_campaigns_state WHERE id = ?`);
     this.stmtClearActiveCampaignStates = this.db.prepare(`DELETE FROM active_campaigns_state`);
+
+    // Auth Sessions Prepared Statements
+    this.stmtInsertSession = this.db.prepare(`
+      INSERT OR REPLACE INTO auth_sessions (
+        token, username, ip, user_agent, created_at, last_activity_at, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    this.stmtSelectSession = this.db.prepare(`SELECT * FROM auth_sessions WHERE token = ?`);
+    this.stmtUpdateSessionActivity = this.db.prepare(`UPDATE auth_sessions SET last_activity_at = ? WHERE token = ?`);
+    this.stmtDeleteSession = this.db.prepare(`DELETE FROM auth_sessions WHERE token = ?`);
+    this.stmtDeleteAllSessions = this.db.prepare(`DELETE FROM auth_sessions`);
+    this.stmtCleanExpiredSessions = this.db.prepare(`DELETE FROM auth_sessions WHERE expires_at < ?`);
   }
 
   /**
@@ -925,6 +952,75 @@ class SqliteManager {
       return deletedCount;
     } catch (e) {
       return 0;
+    }
+  }
+
+  // =========================================================================
+  // AUTH SESSIONS MANAGEMENT (STATEFUL TOKEN & REVOCATION)
+  // =========================================================================
+  saveSession({ token, username, ip, userAgent, createdAt, lastActivityAt, expiresAt }) {
+    try {
+      this.stmtInsertSession.run(
+        String(token),
+        String(username || 'admin'),
+        String(ip || '127.0.0.1'),
+        String(userAgent || ''),
+        Number(createdAt || Date.now()),
+        Number(lastActivityAt || Date.now()),
+        Number(expiresAt)
+      );
+      return true;
+    } catch (err) {
+      console.error('[SqliteManager] Gagal menyimpan auth session:', err.message);
+      return false;
+    }
+  }
+
+  getSession(token) {
+    if (!token) return null;
+    try {
+      return this.stmtSelectSession.get(token) || null;
+    } catch (err) {
+      console.error('[SqliteManager] Gagal mengambil auth session:', err.message);
+      return null;
+    }
+  }
+
+  updateSessionActivity(token, timestamp = Date.now()) {
+    if (!token) return false;
+    try {
+      this.stmtUpdateSessionActivity.run(timestamp, token);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  deleteSession(token) {
+    if (!token) return false;
+    try {
+      this.stmtDeleteSession.run(token);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  deleteAllSessions() {
+    try {
+      this.stmtDeleteAllSessions.run();
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  cleanExpiredSessions(now = Date.now()) {
+    try {
+      this.stmtCleanExpiredSessions.run(now);
+      return true;
+    } catch (err) {
+      return false;
     }
   }
 

@@ -1,11 +1,13 @@
 /**
- * Auth Manager - Access Gatekeeper & Enterprise Authentication Subsystem
+ * Auth Manager - Enterprise Access Gatekeeper & Single-Operator Authentication Subsystem
  * Menyediakan proteksi akses penuh untuk Shopee Live View Bot Apps:
+ * - Single-User Operator Standard Authentication (Username + Password)
  * - PBKDF2 Password Hashing dengan Salt acak 16-byte (100.000 iterasi)
- * - HMAC-SHA256 Cryptographic Session Token (Stateful & Revocable)
+ * - HMAC-SHA256 Cryptographic Session Token (Stateful & Persistent di SQLite)
+ * - Inactivity Idle Timeout (Default 120 Menit dengan opsi kustomisasi)
+ * - Stateful Token Revocation Instan (Tanpa Zombie Token saat logout atau ganti password)
  * - Anti-Brute-Force IP Jail (Maksimal 5 kegagalan per 10 menit, lockout 15 menit)
- * - 2FA WhatsApp OTP verification via Baileys Gateway
- * - Persistensi konfigurasi keamanan di database SQLite (system_config)
+ * - Persistensi konfigurasi keamanan di database SQLite (system_config & auth_sessions)
  */
 
 const crypto = require('crypto');
@@ -14,18 +16,30 @@ const waGateway = require('../wa-gateway/whatsapp-service');
 
 // Secret key untuk penandatanganan token sesi
 const SESSION_SECRET = process.env.SESSION_SECRET || 'shopee-live-gatekeeper-session-secret-2026-xyz!';
+const DEFAULT_USERNAME = process.env.APP_MASTER_USERNAME || 'admin';
 const DEFAULT_PASSWORD = process.env.APP_MASTER_PASSWORD || 'shopee@admin2026';
+const DEFAULT_TIMEOUT_MINUTES = 120; // Default 120 Menit sesuai instruksi
 
 class AuthManager {
   constructor() {
     this.failedAttempts = new Map(); // ip -> { count, firstAttemptTime, blockedUntil }
-    this.activeSessions = new Map(); // token -> { createdAt, expiresAt, ip, userAgent }
     this.pendingOtp = new Map();     // otpCode -> { expiresAt, createdAt, ip }
     this.maxFailedAttempts = 5;
     this.blockDurationMs = 15 * 60 * 1000; // 15 menit blokir IP
     this.attemptWindowMs = 10 * 60 * 1000; // 10 menit jendela kegagalan
 
     this.initSecurityConfig();
+  }
+
+  /**
+   * Getter kompatibilitas ke database SQLite auth_sessions
+   */
+  get activeSessions() {
+    return {
+      has: (token) => !!sqliteManager.getSession(token),
+      get: (token) => sqliteManager.getSession(token),
+      delete: (token) => sqliteManager.deleteSession(token)
+    };
   }
 
   /**
@@ -38,15 +52,34 @@ class AuthManager {
         const { hash, salt } = this.hashPassword(DEFAULT_PASSWORD);
         const initialConfig = {
           enabled: true,
+          username: DEFAULT_USERNAME,
           passwordHash: hash,
           salt: salt,
-          sessionTimeoutMinutes: 60,
+          sessionTimeoutMinutes: DEFAULT_TIMEOUT_MINUTES,
           enable2faWhatsapp: false,
           adminPhone: '',
           updatedAt: new Date().toISOString()
         };
         sqliteManager.saveConfig('security', initialConfig);
+      } else {
+        // Migrasi seamless jika data lama belum memiliki username atau sessionTimeoutMinutes
+        let modified = false;
+        if (!existingConfig.username) {
+          existingConfig.username = DEFAULT_USERNAME;
+          modified = true;
+        }
+        if (!existingConfig.sessionTimeoutMinutes || existingConfig.sessionTimeoutMinutes === 60) {
+          existingConfig.sessionTimeoutMinutes = DEFAULT_TIMEOUT_MINUTES;
+          modified = true;
+        }
+        if (modified) {
+          existingConfig.updatedAt = new Date().toISOString();
+          sqliteManager.saveConfig('security', existingConfig);
+        }
       }
+
+      // Bersihkan sesi yang kadaluwarsa saat startup
+      sqliteManager.cleanExpiredSessions();
     } catch (err) {
       console.error('[AuthManager] Gagal inisialisasi konfigurasi keamanan:', err.message);
     }
@@ -60,31 +93,38 @@ class AuthManager {
       const config = sqliteManager.getConfig('security') || {};
       return {
         enabled: config.enabled !== false,
-        sessionTimeoutMinutes: config.sessionTimeoutMinutes || 60,
+        username: config.username || DEFAULT_USERNAME,
+        sessionTimeoutMinutes: config.sessionTimeoutMinutes || DEFAULT_TIMEOUT_MINUTES,
         enable2faWhatsapp: !!config.enable2faWhatsapp,
         adminPhone: config.adminPhone ? config.adminPhone.slice(0, 4) + '****' + config.adminPhone.slice(-3) : '',
         updatedAt: config.updatedAt || null
       };
     } catch (e) {
-      return { enabled: true, sessionTimeoutMinutes: 60, enable2faWhatsapp: false };
+      return { 
+        enabled: true, 
+        username: DEFAULT_USERNAME, 
+        sessionTimeoutMinutes: DEFAULT_TIMEOUT_MINUTES, 
+        enable2faWhatsapp: false 
+      };
     }
   }
 
   /**
-   * Dapatkan konfigurasi internal lengkap
+   * Dapatkan konfigurasi internal lengkap (termasuk hash dan salt)
    */
   getInternalConfig() {
     return sqliteManager.getConfig('security') || {
       enabled: true,
+      username: DEFAULT_USERNAME,
       passwordHash: '',
       salt: '',
-      sessionTimeoutMinutes: 60,
+      sessionTimeoutMinutes: DEFAULT_TIMEOUT_MINUTES,
       enable2faWhatsapp: false
     };
   }
 
   /**
-   * Generate PBKDF2 hash dengan salt acak 16 byte
+   * Generate PBKDF2 hash dengan salt acak 16 byte (100.000 iterasi SHA-256)
    */
   hashPassword(password, customSalt = null) {
     const salt = customSalt || crypto.randomBytes(16).toString('hex');
@@ -93,39 +133,84 @@ class AuthManager {
   }
 
   /**
-   * Verifikasi apakah password input cocok dengan hash tersimpan
+   * Verifikasi kecocokan password dengan hash yang tersimpan
    */
   verifyPassword(inputPassword) {
     if (!inputPassword || typeof inputPassword !== 'string') return false;
     const config = this.getInternalConfig();
     if (!config.passwordHash || !config.salt) return false;
 
-    const { hash } = this.hashPassword(inputPassword, config.salt);
-    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(config.passwordHash, 'hex'));
+    try {
+      const { hash } = this.hashPassword(inputPassword, config.salt);
+      return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(config.passwordHash, 'hex'));
+    } catch (e) {
+      return false;
+    }
   }
 
   /**
-   * Ubah master password
+   * Verifikasi kredensial Username dan Password operator
    */
-  changePassword(oldPassword, newPassword) {
-    if (!this.verifyPassword(oldPassword)) {
-      return { success: false, message: 'Password lama yang dimasukkan salah.' };
-    }
-    if (!newPassword || newPassword.length < 6) {
-      return { success: false, message: 'Password baru minimal harus terdiri dari 6 karakter.' };
-    }
-
-    const { hash, salt } = this.hashPassword(newPassword);
+  verifyCredentials(inputUsername, inputPassword) {
+    if (!inputUsername || !inputPassword) return false;
     const config = this.getInternalConfig();
-    config.passwordHash = hash;
-    config.salt = salt;
+    const storedUsername = config.username || DEFAULT_USERNAME;
+
+    if (String(inputUsername).trim().toLowerCase() !== String(storedUsername).trim().toLowerCase()) {
+      return false;
+    }
+
+    return this.verifyPassword(inputPassword);
+  }
+
+  /**
+   * Ubah kredensial operator (Username dan/atau Password)
+   * Menginvalidasi SELURUH sesi aktif di database setelah berhasil
+   */
+  changeCredentials(oldPassword, newUsername = null, newPassword = null) {
+    if (!this.verifyPassword(oldPassword)) {
+      return { success: false, message: 'Password lama/saat ini yang Anda masukkan salah.' };
+    }
+
+    const config = this.getInternalConfig();
+    let updated = false;
+
+    // Perubahan Username
+    if (newUsername && typeof newUsername === 'string' && newUsername.trim()) {
+      const trimmedUser = newUsername.trim();
+      if (trimmedUser.length < 3) {
+        return { success: false, message: 'Username baru minimal harus terdiri dari 3 karakter.' };
+      }
+      config.username = trimmedUser;
+      updated = true;
+    }
+
+    // Perubahan Password
+    if (newPassword && typeof newPassword === 'string' && newPassword.trim()) {
+      if (newPassword.length < 6) {
+        return { success: false, message: 'Password baru minimal harus terdiri dari 6 karakter.' };
+      }
+      const { hash, salt } = this.hashPassword(newPassword);
+      config.passwordHash = hash;
+      config.salt = salt;
+      updated = true;
+    }
+
+    if (!updated) {
+      return { success: false, message: 'Tidak ada perubahan username atau password yang dimasukkan.' };
+    }
+
     config.updatedAt = new Date().toISOString();
-
     sqliteManager.saveConfig('security', config);
-    // Invalidate seluruh sesi lama saat password diubah
-    this.activeSessions.clear();
 
-    return { success: true, message: 'Master Password berhasil diperbarui. Seluruh sesi lama telah direset.' };
+    // Invalidate SELURUH sesi aktif lama di database saat kredensial diubah
+    sqliteManager.deleteAllSessions();
+
+    return { 
+      success: true, 
+      message: 'Kredensial akun operator berhasil diperbarui. Seluruh sesi login lama telah direset demi keamanan.',
+      username: config.username
+    };
   }
 
   /**
@@ -179,11 +264,13 @@ class AuthManager {
   }
 
   /**
-   * Buat Cryptographic Session Token (HMAC-SHA256)
+   * Buat Cryptographic Session Token (HMAC-SHA256) & simpan secara stateful di SQLite
    */
-  createSession(ip = '127.0.0.1', userAgent = '', rememberMe = false) {
+  createSession(username = null, ip = '127.0.0.1', userAgent = '', rememberMe = false) {
     const config = this.getInternalConfig();
-    const timeoutMinutes = rememberMe ? (7 * 24 * 60) : (config.sessionTimeoutMinutes || 60);
+    const activeUsername = username || config.username || DEFAULT_USERNAME;
+    // Jika remember me: sesi diperpanjang hingga 7 hari, jika normal: timeout sesuai konfigurasi (default 120 menit)
+    const timeoutMinutes = rememberMe ? (7 * 24 * 60) : (config.sessionTimeoutMinutes || DEFAULT_TIMEOUT_MINUTES);
     const now = Date.now();
     const expiresAt = now + (timeoutMinutes * 60 * 1000);
 
@@ -191,24 +278,39 @@ class AuthManager {
     const hmac = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
     const token = `sbt_${Buffer.from(payload).toString('base64url')}.${hmac}`;
 
-    this.activeSessions.set(token, {
-      createdAt: now,
-      expiresAt,
+    // Simpan ke SQLite stateful session table
+    sqliteManager.saveSession({
+      token,
+      username: activeUsername,
       ip,
-      userAgent
+      userAgent,
+      createdAt: now,
+      lastActivityAt: now,
+      expiresAt
     });
 
-    return { token, expiresAt, timeoutMinutes };
+    return { 
+      token, 
+      username: activeUsername,
+      expiresAt, 
+      timeoutMinutes 
+    };
   }
 
   /**
    * Validasi keabsahan token sesi klien
+   * Melakukan:
+   * 1. Cryptographic HMAC Signature check
+   * 2. Database state check (Apakah token belum di-revoke / logout?)
+   * 3. Hard Expiry check
+   * 4. Inactivity Idle Timeout check (Default 120 menit)
+   * 5. Rolling touch last_activity_at jika valid
    */
-  verifySessionToken(token) {
+  verifySessionToken(token, ip = null) {
     const config = this.getInternalConfig();
-    // Jika proteksi keamanan dimatikan oleh admin
+    // Jika proteksi keamanan dinonaktifkan oleh admin (opsional)
     if (config.enabled === false) {
-      return { valid: true, bypassed: true };
+      return { valid: true, bypassed: true, username: config.username || DEFAULT_USERNAME };
     }
 
     if (!token || typeof token !== 'string' || !token.startsWith('sbt_')) {
@@ -224,38 +326,107 @@ class AuthManager {
       const [encodedPayload, signature] = parts;
       const payload = Buffer.from(encodedPayload, 'base64url').toString('utf8');
 
-      // Validasi HMAC signature
+      // 1. Validasi HMAC signature
       const expectedHmac = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
       if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expectedHmac, 'hex'))) {
         return { valid: false, reason: 'Cryptographic signature mismatch' };
       }
 
-      const payloadParts = payload.split('.');
-      const expiresAt = parseInt(payloadParts[1], 10);
+      // 2. Stateful Check di SQLite (Cegah Zombie Token)
+      const session = sqliteManager.getSession(token);
+      if (!session) {
+        return { valid: false, reason: 'Session token has been revoked or logged out' };
+      }
 
-      if (isNaN(expiresAt) || Date.now() > expiresAt) {
-        this.activeSessions.delete(token);
+      const now = Date.now();
+
+      // 3. Hard Expiry Check
+      if (now > session.expires_at) {
+        sqliteManager.deleteSession(token);
         return { valid: false, reason: 'Session token has expired' };
       }
 
-      return { valid: true, expiresAt };
+      // 4. Inactivity Idle Timeout Check (Default 120 menit)
+      const timeoutMinutes = config.sessionTimeoutMinutes || DEFAULT_TIMEOUT_MINUTES;
+      const idleTimeoutMs = timeoutMinutes * 60 * 1000;
+      if (session.last_activity_at && (now - session.last_activity_at > idleTimeoutMs)) {
+        sqliteManager.deleteSession(token);
+        return { 
+          valid: false, 
+          idleExpired: true,
+          reason: `Session expired due to inactivity (${timeoutMinutes} minutes idle)` 
+        };
+      }
+
+      // 5. Sliding window: Touch last_activity_at di database
+      sqliteManager.updateSessionActivity(token, now);
+
+      return { 
+        valid: true, 
+        username: session.username, 
+        expiresAt: session.expires_at,
+        lastActivityAt: now,
+        timeoutMinutes
+      };
     } catch (err) {
       return { valid: false, reason: err.message };
     }
   }
 
   /**
-   * Hapus sesi aktif (Logout)
+   * Hapus sesi aktif dari SQLite (Logout)
    */
   destroySession(token) {
     if (token) {
-      this.activeSessions.delete(token);
+      sqliteManager.deleteSession(token);
     }
     return true;
   }
 
   /**
-   * Generate 2FA WhatsApp OTP (6 Digit angka)
+   * Hapus SELURUH sesi aktif di database
+   */
+  destroyAllSessions() {
+    sqliteManager.deleteAllSessions();
+    return true;
+  }
+
+  /**
+   * Toggle Security Guard (Aktifkan / Nonaktifkan)
+   */
+  toggleSecurity(enabled) {
+    const config = this.getInternalConfig();
+    config.enabled = Boolean(enabled);
+    config.updatedAt = new Date().toISOString();
+    sqliteManager.saveConfig('security', config);
+    return { success: true, enabled: config.enabled };
+  }
+
+  /**
+   * Update pengaturan keamanan (timeout, username)
+   */
+  updateSettings(settings = {}) {
+    const config = this.getInternalConfig();
+    if (settings.sessionTimeoutMinutes !== undefined) {
+      config.sessionTimeoutMinutes = Math.max(5, parseInt(settings.sessionTimeoutMinutes, 10) || DEFAULT_TIMEOUT_MINUTES);
+    }
+    if (settings.username && typeof settings.username === 'string' && settings.username.trim()) {
+      config.username = settings.username.trim();
+    }
+    if (settings.enable2faWhatsapp !== undefined) {
+      config.enable2faWhatsapp = Boolean(settings.enable2faWhatsapp);
+    }
+    if (settings.adminPhone) {
+      config.adminPhone = String(settings.adminPhone).trim();
+    }
+    config.updatedAt = new Date().toISOString();
+
+    sqliteManager.saveConfig('security', config);
+    return { success: true, config: this.getPublicConfig() };
+  }
+
+  /**
+   * Generate 2FA WhatsApp OTP (6 Digit angka) - Opsional jika diaktifkan admin
    */
   async generateAndSendWhatsappOtp(ip) {
     const config = this.getInternalConfig();
@@ -297,37 +468,6 @@ class AuthManager {
 
     this.pendingOtp.delete(otpCode);
     return true;
-  }
-
-  /**
-   * Toggle Security Guard (Aktifkan / Nonaktifkan)
-   */
-  toggleSecurity(enabled) {
-    const config = this.getInternalConfig();
-    config.enabled = Boolean(enabled);
-    config.updatedAt = new Date().toISOString();
-    sqliteManager.saveConfig('security', config);
-    return { success: true, enabled: config.enabled };
-  }
-
-  /**
-   * Update pengaturan keamanan (timeout, 2FA toggle)
-   */
-  updateSettings(settings = {}) {
-    const config = this.getInternalConfig();
-    if (settings.sessionTimeoutMinutes !== undefined) {
-      config.sessionTimeoutMinutes = Math.max(5, parseInt(settings.sessionTimeoutMinutes, 10) || 60);
-    }
-    if (settings.enable2faWhatsapp !== undefined) {
-      config.enable2faWhatsapp = Boolean(settings.enable2faWhatsapp);
-    }
-    if (settings.adminPhone) {
-      config.adminPhone = String(settings.adminPhone).trim();
-    }
-    config.updatedAt = new Date().toISOString();
-
-    sqliteManager.saveConfig('security', config);
-    return { success: true, config: this.getPublicConfig() };
   }
 }
 

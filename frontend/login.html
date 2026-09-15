@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Operator - Shopee Live View Bot Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+
+  <!-- Top Enterprise Brand Bar -->
+  <header class="login-header">
+    <div class="brand-section">
+      <div class="brand-icon">S</div>
+      <div>
+        <div class="brand-title">🏢 Interna Solusi Teknologi</div>
+        <div class="brand-subtitle">Shopee Live Automation & Traffic Acceleration Node</div>
+      </div>
+    </div>
+    <div class="node-status">
+      <span class="pulse-dot"></span>
+      <span>Private Server Node • Secure Gateway</span>
+    </div>
+  </header>
+
+  <!-- Login Main Card -->
+  <main class="login-container">
+    <div class="login-card" id="loginCard">
+      <div class="card-header">
+        <div class="shield-badge">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <h1 class="card-title">Shopee Live View Bot Pro</h1>
+        <p class="card-desc">Portal Autentikasi Tunggal Operator (Single Operator Access). Masukkan kredensial untuk membuka dashboard kendali.</p>
+      </div>
+
+      <!-- Alert Notification Banner -->
+      <div id="loginAlert" class="login-alert" role="alert"></div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="login-form">
+        <!-- Username Field -->
+        <div class="input-group">
+          <label class="input-label" for="inputUsername">Username Operator</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input 
+              type="text" 
+              id="inputUsername" 
+              class="form-input" 
+              placeholder="Username operator..." 
+              value="admin" 
+              autocomplete="username" 
+              required 
+              autofocus
+            />
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div class="input-group">
+          <label class="input-label" for="inputPassword">Password Akun</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔑</span>
+            <input 
+              type="password" 
+              id="inputPassword" 
+              class="form-input" 
+              placeholder="Masukkan password..." 
+              autocomplete="current-password" 
+              required 
+            />
+            <button type="button" id="btnToggleEye" class="btn-toggle-eye" title="Tampilkan/Sembunyikan Password" tabindex="-1">
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <!-- Options: Remember Me & Idle Timeout Note -->
+        <div class="options-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="inputRemember">
+            <span>Ingat sesi di perangkat ini</span>
+          </label>
+        </div>
+
+        <div class="timeout-notice">
+          <span>⏱️</span>
+          <span>Sesi otomatis keluar saat idle selama <strong>120 Menit</strong> (Default).</span>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="btnSubmitLogin" class="btn-submit">
+          <span id="btnText">Masuk ke Control Center</span>
+          <span id="btnSpinner" class="spinner"></span>
+        </button>
+      </form>
+
+      <!-- Trust Badges -->
+      <div class="trust-badges">
+        <div class="trust-item">
+          <span>🛡️</span>
+          <span>Enkripsi SHA-256 PBKDF2</span>
+        </div>
+        <div class="trust-item">
+          <span>⏱️</span>
+          <span>120 Menit Idle Auto-Logout</span>
+        </div>
+        <div class="trust-item">
+          <span>🔒</span>
+          <span>HttpOnly Stateful Session</span>
+        </div>
+        <div class="trust-item">
+          <span>🚫</span>
+          <span>Anti-Brute-Force Guard</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer Copyright -->
+  <footer class="login-footer">
+    © 2026 <strong>PT. Interna Solusi Teknologi</strong>. Enterprise Live Traffic Acceleration System.<br>
+    Dilindungi standar keamanan server internal. Akses tidak sah akan dicatat dan diblokir.
+  </footer>
+
+  <script>
+    (function() {
+      const form = document.getElementById('loginForm');
+      const card = document.getElementById('loginCard');
+      const alertBox = document.getElementById('loginAlert');
+      const inputUser = document.getElementById('inputUsername');
+      const inputPass = document.getElementById('inputPassword');
+      const inputRemember = document.getElementById('inputRemember');
+      const btnSubmit = document.getElementById('btnSubmitLogin');
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const btnToggleEye = document.getElementById('btnToggleEye');
+
+      // 1. Tampilkan banner notifikasi jika ada parameter URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const reason = urlParams.get('reason');
+
+      if (reason === 'idle_timeout') {
+        showAlert('⚠️ Sesi Anda telah berakhir secara otomatis karena tidak ada aktivitas selama 120 menit. Silakan login kembali.', 'alert-warning');
+      } else if (reason === 'logged_out') {
+        showAlert('✅ Anda telah berhasil keluar dari sistem dengan aman (Logged Out).', 'alert-success');
+      } else if (reason === 'session_expired') {
+        showAlert('ℹ️ Sesi login Anda telah kedaluwarsa. Silakan masukkan kredensial operator.', 'alert-info');
+      } else if (reason === 'unauthorized') {
+        showAlert('🔒 Halaman diblokir. Harap login terlebih dahulu untuk membuka dashboard.', 'alert-info');
+      }
+
+      function showAlert(msg, typeClass = 'alert-error') {
+        alertBox.className = 'login-alert ' + typeClass;
+        alertBox.textContent = msg;
+        alertBox.style.display = 'block';
+      }
+
+      function hideAlert() {
+        alertBox.style.display = 'none';
+      }
+
+      // 2. Toggle lihat password
+      btnToggleEye.addEventListener('click', () => {
+        const isPassword = inputPass.getAttribute('type') === 'password';
+        inputPass.setAttribute('type', isPassword ? 'text' : 'password');
+        btnToggleEye.textContent = isPassword ? '🙈' : '👁️';
+      });
+
+      // 3. Form submit login
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideAlert();
+
+        const username = inputUser.value.trim();
+        const password = inputPass.value;
+        const rememberMe = inputRemember.checked;
+
+        if (!username || !password) {
+          showAlert('Username dan password wajib diisi.', 'alert-error');
+          return;
+        }
+
+        // State loading
+        btnSubmit.disabled = true;
+        btnText.textContent = 'Memverifikasi Akses...';
+        btnSpinner.style.display = 'inline-block';
+
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin', // Sertakan HttpOnly cookies
+            body: JSON.stringify({ username, password, rememberMe })
+          });
+
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            showAlert('🔓 Autentikasi Berhasil! Mengalihkan ke dashboard...', 'alert-success');
+            // Alihkan langsung ke dashboard control center
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 500);
+          } else {
+            // Efek getar (shake animation) jika kredensial salah
+            card.classList.remove('shake');
+            void card.offsetWidth; // trigger reflow
+            card.classList.add('shake');
+
+            const errorMsg = data.error || 'Autentikasi gagal. Periksa kembali username dan password Anda.';
+            showAlert(errorMsg, 'alert-error');
+            inputPass.select();
+          }
+        } catch (err) {
+          showAlert('Gagal terhubung ke server: ' + err.message, 'alert-error');
+        } finally {
+          btnSubmit.disabled = false;
+          btnText.textContent = 'Masuk ke Control Center';
+          btnSpinner.style.display = 'none';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

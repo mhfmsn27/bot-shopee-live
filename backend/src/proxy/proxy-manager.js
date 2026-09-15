@@ -440,7 +440,7 @@ class ProxyManager {
         if (!validProtocols.includes(protocol)) protocol = 'http';
         if (!validTypes.includes(type)) type = 'datacenter';
 
-        const exists = this.proxies.some(p => p.ip === ip && p.port === port);
+        const exists = this.proxies.some(p => p.ip === ip && p.port === port && (p.username || '') === (username || ''));
         if (!exists) {
           this.proxies.push({
             id: `prx-${Date.now().toString(36)}-${crypto.randomBytes(2).toString('hex')}`,

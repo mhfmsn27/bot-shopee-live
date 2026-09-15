@@ -168,9 +168,17 @@ async function runTests() {
     assert.strictEqual(compRes.status, 200);
     assert.strictEqual(compRes.body.success, true);
     assert.strictEqual(compRes.body.account.accountType, 'real_registered');
-    assert.ok(compRes.body.account.cookies.includes('SPC_EC='));
-    assert.strictEqual(compRes.body.account.cookieStatus, 'alive');
-    newlyRegisteredAccount = compRes.body.account;
+    assert.strictEqual(compRes.body.account.cookieStatus, 'pending_cookie_bind');
+
+    // Bind real cookies
+    const bindRes = await apiRequest('POST', `/api/accounts/${compRes.body.account.id}/bind-cookies`, {
+      cookies: 'SPC_U=88112233; SPC_EC=spc_ec_authentic_val; SPC_ST=spc_st_authentic_val; SPC_F=spc_f_val;'
+    });
+    assert.strictEqual(bindRes.status, 200);
+    assert.strictEqual(bindRes.body.success, true);
+    assert.strictEqual(bindRes.body.account.cookieStatus, 'alive');
+    assert.ok(bindRes.body.account.cookies.includes('SPC_EC='));
+    newlyRegisteredAccount = bindRes.body.account;
   });
 
   // TEST 6: Cookie Vault Import (Raw Text with SPC_EC, SPC_ST, SPC_U)
@@ -223,7 +231,10 @@ async function runTests() {
       cookie: testCookie
     });
 
-    assert.strictEqual(headers['Cookie'], testCookie);
+    assert.ok(headers['Cookie'].includes('SPC_U=88112233'));
+    assert.ok(headers['Cookie'].includes('SPC_EC=spc_ec_authentic_val'));
+    assert.ok(headers['Cookie'].includes('SPC_ST=spc_st_authentic_val'));
+    assert.ok(headers['Cookie'].includes('SPC_F='));
     assert.strictEqual(headers['Origin'], 'https://live.shopee.co.id');
     assert.ok(headers['User-Agent']);
 

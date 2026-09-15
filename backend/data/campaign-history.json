@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "id": "hist-1789396927520-13a0",
+    "campaignId": "cmp-mu1cq9pk-r5xg",
+    "name": "Flash Sale Akbar 15k Viewers",
+    "clientName": "Erigo Mega Brand",
+    "roomId": "55443322",
+    "startTime": "2026-09-14T14:42:07.520Z",
+    "endTime": "2026-09-14T14:42:07.520Z",
+    "durationMinutes": 1,
+    "peakViewers": 50000,
+    "accumulatedViews": 2,
+    "totalLikes": 0,
+    "totalComments": 0,
+    "totalCartClicks": 0,
+    "totalChurnRotations": 0,
+    "bandwidthKb": 0,
+    "stopReason": "manual_stop",
+    "createdAt": "2026-09-14T14:42:07.520Z"
+  }
+]

@@ -21,7 +21,12 @@ class CampaignInstance extends EventEmitter {
   constructor(options = {}) {
     super();
     this.id = options.id || `cmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-    this.name = options.name || `Siaran Shopee #${this.id.slice(-4).toUpperCase()}`;
+    this.clientName = (options.clientName || options.storeLabel || options.storeName || '').trim();
+    if (this.clientName && !options.name) {
+      this.name = this.clientName;
+    } else {
+      this.name = options.name || (this.clientName ? this.clientName : `Siaran Shopee #${this.id.slice(-4).toUpperCase()}`);
+    }
     this.roomId = parseLiveRoomId(options.urlOrRoomId || options.roomId || options.liveUrl || options.shopeeLiveUrl);
     this.rawInputUrl = options.urlOrRoomId || options.roomId || options.liveUrl || options.shopeeLiveUrl || '';
     this.targetViewers = Math.max(1, parseInt(options.targetViewers, 10) || 100);
@@ -37,7 +42,7 @@ class CampaignInstance extends EventEmitter {
       : (parseInt(options.campaignDurationMinutes, 10) || 0);
 
     this.rampUpRatePerMin = Math.max(5, parseInt(options.rampUpRatePerMin, 10) || 30);
-    this.hybridMode = options.hybridMode !== undefined ? Boolean(options.hybridMode) : (options.allowGuestStream !== undefined ? Boolean(options.allowGuestStream) : false);
+    this.hybridMode = options.hybridMode !== undefined ? Boolean(options.hybridMode) : true;
 
     // Lifecycle
     this.status = 'IDLE'; // IDLE | RUNNING | STOPPING | FINISHED
@@ -91,23 +96,15 @@ class CampaignInstance extends EventEmitter {
     if (this.status === 'RUNNING') return this;
     if (!this.roomId) throw new Error(`Room ID atau URL Shopee Live tidak valid untuk [${this.name}].`);
 
-    // Validasi Batasan Akun: Mode Standar vs Mode Hybrid Cerdas
+    // Zero-Limiter Elastic Scaling: Distribusi puluhan ribu bot view
     const availableAccounts = getAvailableAccounts();
-    if (!this.hybridMode) {
-      if (availableAccounts.length === 0) {
-        throw new Error(`Tidak dapat memulai siaran [${this.name}]: Seluruh akun aktif terverifikasi sedang digunakan di siaran live lain atau belum ada akun (0 akun tersedia). Silakan tambahkan akun baru di menu Akun atau tunggu sesi live lain selesai.`);
-      }
+    const anchorCount = Math.min(this.targetViewers, availableAccounts.length);
+    const guestCount = Math.max(0, this.targetViewers - anchorCount);
 
-      // Jika target viewer melebihi akun yang tersedia, batasi maksimal sesuai akun yang tersedia
-      if (this.targetViewers > availableAccounts.length) {
-        const originalTarget = this.targetViewers;
-        this.targetViewers = availableAccounts.length;
-        this.emit('log', 'WARN', `Target penonton [${this.name}] (${originalTarget}) dibatasi otomatis menjadi ${this.targetViewers} viewers menyesuaikan ${availableAccounts.length} akun terverifikasi yang sedang tersedia.`);
-      }
+    if (guestCount > 0) {
+      this.emit('log', 'INFO', `⚡ Skala Enterprise Aktif [${this.name}]: Target ${this.targetViewers.toLocaleString('id-ID')} Viewers didistribusikan ke ${anchorCount} Anchor Viewers (Akun Ber-Cookie) + ${guestCount.toLocaleString('id-ID')} Persistent Streamers (Multi-Proxy Residential).`);
     } else {
-      const anchorCount = Math.min(this.targetViewers, availableAccounts.length);
-      const guestCount = Math.max(0, this.targetViewers - anchorCount);
-      this.emit('log', 'INFO', `Mode Hybrid Aktif: ${anchorCount} Anchor Viewers (Akun Ber-Cookie) + ${guestCount} Guest Persistent Streamers (Residential Proxy).`);
+      this.emit('log', 'INFO', `⚡ Skala Dedicated [${this.name}]: Seluruh ${this.targetViewers.toLocaleString('id-ID')} Viewers menggunakan akun terverifikasi.`);
     }
 
     this.status = 'RUNNING';
@@ -495,6 +492,7 @@ class CampaignInstance extends EventEmitter {
     return {
       id: this.id,
       name: this.name,
+      clientName: this.clientName || this.name,
       roomId: this.roomId,
       rawInputUrl: this.rawInputUrl,
       targetViewers: this.targetViewers,
@@ -526,6 +524,59 @@ class CampaignInstance extends EventEmitter {
       },
       recentComments: this.recentComments.slice(-15)
     };
+  }
+
+  /**
+   * Mengubah target viewers secara dinamis saat siaran sedang berlangsung (Scale Up / Scale Down)
+   * @param {number} newTarget
+   */
+  updateTargetViewers(newTarget) {
+    const parsed = Math.max(1, parseInt(newTarget, 10));
+    const oldTarget = this.targetViewers;
+    this.targetViewers = parsed;
+
+    this.emit('log', 'INFO', `🎚️ Skala Penonton [${this.name}]: Target diubah dari ${oldTarget} menjadi ${parsed} viewers.`);
+
+    if (parsed < oldTarget) {
+      // Scale Down: kurangi worker penonton secara bertahap dan alami
+      const excess = this.getActiveViewerCount() - parsed;
+      if (excess > 0) {
+        this.gracefulScaleDown(excess);
+      }
+    } else if (parsed > oldTarget && this.status === 'RUNNING') {
+      // Scale Up: picu penambahan worker awal
+      const need = Math.min(parsed - this.getActiveViewerCount(), 10);
+      for (let i = 0; i < need; i++) {
+        setTimeout(() => this.spawnWorker(), i * 350);
+      }
+    }
+
+    this.emit('status_change', { id: this.id, status: this.status, campaign: this.getMetrics() });
+    return {
+      success: true,
+      oldTarget,
+      newTarget: parsed,
+      activeViewers: this.getActiveViewerCount()
+    };
+  }
+
+  /**
+   * Mengurangi penonton aktif secara halus bertahap agar grafik Shopee tidak anjlok seketika
+   * @param {number} count
+   */
+  gracefulScaleDown(count) {
+    const viewingWorkers = Array.from(this.workers.values()).filter(w => w.state === 'VIEWING');
+    const toRemove = Math.min(count, viewingWorkers.length);
+    if (toRemove <= 0) return;
+
+    const selected = viewingWorkers.slice(0, toRemove);
+    selected.forEach((worker, idx) => {
+      setTimeout(() => {
+        try {
+          worker.leave('scaled_down');
+        } catch (e) {}
+      }, idx * 600);
+    });
   }
 
   // =========================================================================

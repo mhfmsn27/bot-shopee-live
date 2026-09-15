@@ -26,8 +26,8 @@ async function runTest() {
   console.log(`ℹ️ Akun siap pakai awal: ${initialAvailable}`);
   assert.strictEqual(initialAvailable, totalAccounts, 'Awalnya seluruh akun harus berstatus siap pakai');
 
-  // TEST 1: Permintaan Target melebihi jumlah akun tersedia -> Harus di-clamp ke batas akun tersedia
-  console.log('\n--- TEST 1: Clamp Target Melebihi Akun Tersedia ---');
+  // TEST 1: Permintaan Target melebihi jumlah akun tersedia -> Zero-Limiter arsitektur
+  console.log('\n--- TEST 1: Zero-Limiter Target & Lease Akun Tersedia ---');
   const excessTarget = totalAccounts + 500;
   const cmp1Metrics = retentionController.createCampaign({
     name: 'Live Toko A (Test Clamp)',
@@ -37,7 +37,7 @@ async function runTest() {
   });
 
   console.log(`  Requested: ${excessTarget}, Applied Target: ${cmp1Metrics.targetViewers}`);
-  assert.strictEqual(cmp1Metrics.targetViewers, totalAccounts, 'Target viewers harus dibatasi maksimal sejumlah akun tersedia');
+  assert.strictEqual(cmp1Metrics.targetViewers, excessTarget, 'Zero-Limiter: Target viewers tidak dipotong (unconstrained)');
 
   // Tunggu worker spawn dan klaim akun
   await sleep(3500);
@@ -58,8 +58,8 @@ async function runTest() {
   console.log(`  Contoh akun sibuk: [${busyAccounts[0].username}] menonton: [${busyAccounts[0].busyInCampaign}]`);
   assert(busyAccounts[0].busyInCampaign.includes('Live Toko A'), 'busyInCampaign harus mencantumkan nama sesi siaran');
 
-  // TEST 3: Klaim sisa seluruh akun hingga 0 tersedia
-  console.log('\n--- TEST 3: Pemblokiran Ketika 0 Akun Tersedia ---');
+  // TEST 3: Ketika seluruh akun sibuk, siaran baru tetap dapat meluncur via Guest Streamers (Zero-Limiter)
+  console.log('\n--- TEST 3: Zero-Limiter Elastic Scaling Ketika Seluruh Akun Sibuk ---');
   // Pinjam semua sisa akun
   const leasedIds = [];
   while (accountManager.getAvailableCount() > 0) {
@@ -68,21 +68,17 @@ async function runTest() {
   }
 
   assert.strictEqual(accountManager.getAvailableCount(), 0, 'Akun tersedia harus 0');
-  console.log('  Semua akun berhasil dipinjam (0 akun tersedia). Mencoba mulai siaran baru...');
+  console.log('  Semua akun terpakai sebagai anchor (0 akun bebas). Menguji peluncuran via Guest Streamers...');
 
-  let blocked = false;
-  try {
-    retentionController.createCampaign({
-      name: 'Live Toko C (Harus Ditolak)',
-      urlOrRoomId: 'https://live.shopee.co.id/share?session=33333333',
-      targetViewers: 100
-    });
-  } catch (err) {
-    blocked = true;
-    console.log(`  Berhasil diblokir dengan pesan: "${err.message}"`);
-    assert(err.message.includes('0 akun tersedia') || err.message.includes('sedang digunakan'), 'Pesan error harus menjelaskan 0 akun tersedia');
-  }
-  assert(blocked, 'Memulai siaran ketika 0 akun tersedia HARUS melempar error dan ditolak!');
+  const cmpGuest = retentionController.createCampaign({
+    name: 'Live Toko C (Guest Streamers)',
+    urlOrRoomId: 'https://live.shopee.co.id/share?session=33333333',
+    targetViewers: 100
+  });
+  console.log(`  Sesi baru berhasil meluncur: [${cmpGuest.name}] dengan Target: ${cmpGuest.targetViewers}`);
+  assert.strictEqual(cmpGuest.targetViewers, 100, 'Target viewers tetap 100 via Guest Streamers');
+  assert.strictEqual(cmpGuest.status, 'RUNNING');
+  retentionController.stopCampaignById(cmpGuest.id, 'test_finish');
 
   // TEST 4: Pelepasan Akun Saat Siaran Berhenti -> Akun Kembali Bebas
   console.log('\n--- TEST 4: Pelepasan Akun Saat Siaran Dihentikan ---');
